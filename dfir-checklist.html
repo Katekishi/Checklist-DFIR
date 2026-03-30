@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DFIR Artifact Checklist</title>
+  <link rel="stylesheet" href="assets/dfir-checklist.css">
+</head>
+<body>
+  <button id="menuToggleButton" class="menu-toggle-btn" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="appSidebar" title="Toggle menu">
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M4 6h12"></path>
+      <path d="M4 10h12"></path>
+      <path d="M4 14h12"></path>
+    </svg>
+  </button>
+  <div id="appSidebarBackdrop" class="app-sidebar-backdrop"></div>
+
+  <aside id="appSidebar" class="app-sidebar" aria-label="Primary navigation">
+    <p class="app-sidebar-title">Workspace</p>
+    <button class="app-nav-btn is-active" type="button" data-action="switch-app-view" data-view="overview" aria-pressed="true">Overview</button>
+    <button class="app-nav-btn" type="button" data-action="switch-app-view" data-view="cases" aria-pressed="false">Cases</button>
+    <button class="app-nav-btn" type="button" data-action="switch-app-view" data-view="artifacts" aria-pressed="false">Artifact Manager</button>
+  </aside>
+
+  <main class="page app-shell">
+
+    <div class="app-main">
+    <section id="overviewView" class="app-view app-view-overview is-active" aria-label="Overview">
+    <section class="hero">
+      <div class="hero-panel">
+        <div class="eyebrow">DFIR Artifact Review</div>
+        <h1>MITRE Checklist for Artifact Triage</h1>
+        <p class="hero-copy">
+          This page is generated from the current workbook and runs locally in any modern browser. Analysts can mark artifacts as found,
+          capture case notes, filter by MITRE tactic or keyword, and keep progress in browser local storage.
+        </p>
+        <div class="hero-meta">
+          <span class="meta-pill"><strong id="artifactTotal">0</strong> artifacts</span>
+          <span class="meta-pill"><strong id="mitreTotal">0</strong> MITRE groups</span>
+          <span class="meta-pill">Local browser storage enabled</span>
+        </div>
+        <div class="hero-utility">
+          <div class="summary-progress" aria-label="Overall completion progress">
+            <div class="summary-progress-track"><div id="overallProgressBar" class="summary-progress-segments"></div></div>
+            <p class="summary-progress-copy">Overall progress: <strong id="overallProgressCopy">0% completed</strong></p>
+            <div id="overallStatusLegend" class="summary-progress-legend" aria-label="Status breakdown"></div>
+            <div class="summary-tag-breakdown" aria-label="Completion by tag">
+              <p class="summary-tag-title">Completion by tag</p>
+              <div id="overallTagLegend" class="tag-progress-grid"></div>
+            </div>
+          </div>
+          <div class="hero-signal">
+            <span class="signal-label">Last saved</span>
+            <strong id="lastSavedLabel">Not saved yet</strong>
+          </div>
+        </div>
+      </div>
+      <aside class="summary-panel" aria-label="Checklist summary">
+        <p class="summary-title">Case Snapshot</p>
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <strong id="foundCount">0</strong>
+            <span>Completed artifacts</span>
+          </div>
+          <div class="summary-stat">
+            <strong id="commentCount">0</strong>
+            <span>Artifacts with comments</span>
+          </div>
+          <div class="summary-stat">
+            <strong id="completionPercent">0%</strong>
+            <span>Checklist completion</span>
+          </div>
+          <div class="summary-stat">
+            <strong id="visibleCount">0</strong>
+            <span>Artifacts currently visible</span>
+          </div>
+        </div>
+        <div class="summary-extra">
+          <p><strong id="activeFiltersCount">0</strong> active filters</p>
+          <p><strong id="recentlyUpdatedCount">0</strong> recently updated artifacts</p>
+        </div>
+        <div class="summary-actions">
+          <button id="exportButton" class="primary-btn icon-btn" type="button" aria-label="Export notes" title="Export notes">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M10 3v9"></path>
+              <path d="M6.5 9.5L10 13l3.5-3.5"></path>
+              <path d="M4 16h12"></path>
+            </svg>
+          </button>
+          <button id="resetButton" class="secondary-btn danger-icon-btn icon-btn" type="button" aria-label="Reset saved state" title="Reset saved state">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M5 6h10"></path>
+              <path d="M8 6V4h4v2"></path>
+              <path d="M7 6l.5 10h5L13 6"></path>
+            </svg>
+          </button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="footer-note">
+      Notes are stored locally in the browser using localStorage under this file path. Export notes before moving to another browser profile or device.
+    </section>
+    </section>
+
+    <section id="casesView" class="app-view app-view-cases" aria-label="Cases" hidden>
+
+    <section class="toolbar" aria-label="Checklist controls">
+      <div class="field field-search">
+        <label for="searchInput">Search</label>
+        <div class="search-row">
+          <input id="searchInput" type="search" placeholder="Artifact, path, tool, notes, tag">
+          <button id="clearFiltersButton" class="secondary-btn icon-btn" type="button" aria-label="Clear filters" title="Clear filters">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <path d="M4 4l12 12"></path>
+              <path d="M16 4L4 16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="toolbar-primary-row">
+        <div class="field">
+          <label for="mitreFilter">MITRE Tactic</label>
+          <select id="mitreFilter">
+            <option value="all">All tactics</option>
+          </select>
+        </div>
+        <div class="field field-os-radios">
+          <label id="osFilterLabel">Operating System</label>
+          <div id="osFilterRadios" class="os-filter-radios" role="radiogroup" aria-labelledby="osFilterLabel"></div>
+        </div>
+        <button id="advancedFiltersButton" class="secondary-btn icon-btn" type="button" aria-expanded="false" aria-controls="advancedFiltersPanel" aria-label="Advanced filters" title="Advanced filters">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <path d="M3 5h14"></path>
+            <path d="M6 10h8"></path>
+            <path d="M9 15h2"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="advancedFiltersPanel" class="advanced-filters" aria-hidden="true">
+        <div class="field">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="all">All artifacts</option>
+            <option value="completed">Completed</option>
+            <option value="in-progress">In progress</option>
+            <option value="needs-review">Needs investigation</option>
+            <option value="not-started">Not started</option>
+            <option value="commented">Commented only</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tagFilter">Tag</label>
+          <select id="tagFilter">
+            <option value="all">All tags</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sortSelect">Sort</label>
+          <select id="sortSelect">
+            <option value="default">Default order</option>
+            <option value="artifact-asc">Artifact A to Z</option>
+            <option value="artifact-desc">Artifact Z to A</option>
+            <option value="completed-first">Completed first</option>
+            <option value="status-priority">Status priority</option>
+            <option value="commented-first">Commented first</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Export</label>
+          <p class="advanced-note">Use the export button in Case Snapshot to export current checklist notes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sections-toolbar" aria-label="Section controls">
+      <div class="view-toggle" role="group" aria-label="Checklist layout">
+        <button id="gridViewButton" class="view-toggle-btn is-active" type="button" aria-pressed="true">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <rect x="3" y="3" width="6" height="6" rx="1"></rect>
+            <rect x="11" y="3" width="6" height="6" rx="1"></rect>
+            <rect x="3" y="11" width="6" height="6" rx="1"></rect>
+            <rect x="11" y="11" width="6" height="6" rx="1"></rect>
+          </svg>
+          <span>Grid</span>
+        </button>
+        <button id="listViewButton" class="view-toggle-btn" type="button" aria-pressed="false">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <path d="M4 5h12"></path>
+            <path d="M4 10h12"></path>
+            <path d="M4 15h12"></path>
+          </svg>
+          <span>List</span>
+        </button>
+      </div>
+      <button id="toggleSectionsButton" class="secondary-btn" type="button">Collapse categories</button>
+    </section>
+
+    <section id="sections" class="sections" aria-live="polite"></section>
+
+    <section id="emptyState" class="empty-state" hidden>
+      No artifacts match the current filter. Clear or adjust the search to show checklist items again.
+    </section>
+    </section>
+
+    <section id="artifactsView" class="app-view app-view-artifacts" aria-label="Artifact manager" hidden>
+      <section class="artifact-editor-panel" aria-label="Add and edit artifacts">
+        <div class="artifact-editor-header">
+          <div>
+            <p class="summary-title">Artifact Manager</p>
+            <h2>Manage checklist artifacts</h2>
+            <p class="artifact-editor-copy">Add new artifacts or edit existing ones. Changes are saved in local browser storage.</p>
+          </div>
+          <span id="artifactEditorCount" class="meta-pill"><strong>0</strong> artifacts</span>
+        </div>
+
+        <form id="artifactEditorForm" class="artifact-editor-form">
+          <input id="artifactEditorId" type="hidden" value="">
+          <div class="artifact-editor-grid">
+            <div class="field">
+              <label for="artifactEditorName">Artifact</label>
+              <input id="artifactEditorName" type="text" required placeholder="Prefetch">
+            </div>
+            <div class="field">
+              <label for="artifactEditorMitreSelector">MITRE Tactic</label>
+              <div id="artifactEditorMitreTokenField" class="tag-token-field" role="group" aria-label="Artifact MITRE tactics">
+                <div id="artifactEditorMitreChipList" class="tag-chip-list" aria-live="polite"></div>
+                <select id="artifactEditorMitreSelector">
+                  <option value="" selected hidden></option>
+                </select>
+              </div>
+              <input id="artifactEditorMitre" type="hidden" required>
+            </div>
+            <div class="field">
+              <label for="artifactEditorOsComposer">Operating System</label>
+              <div id="artifactEditorOsTokenField" class="tag-token-field" role="group" aria-label="Artifact operating systems">
+                <div id="artifactEditorOsChipList" class="tag-chip-list" aria-live="polite"></div>
+                <input id="artifactEditorOsComposer" type="text" placeholder="Type an OS and press Enter">
+              </div>
+              <input id="artifactEditorOs" type="hidden" required>
+            </div>
+            <div class="field">
+              <label for="artifactEditorTagsComposer">Tags</label>
+              <div id="artifactEditorTagsTokenField" class="tag-token-field" role="group" aria-label="Artifact tags">
+                <div id="artifactEditorTagsChipList" class="tag-chip-list" aria-live="polite"></div>
+                <input id="artifactEditorTagsComposer" type="text" placeholder="Type a tag and press Enter">
+              </div>
+              <input id="artifactEditorTags" type="hidden" required>
+            </div>
+            <div class="field">
+              <label for="artifactEditorLocationComposer">Location</label>
+              <div id="artifactEditorLocationTokenField" class="tag-token-field" role="group" aria-label="Artifact locations">
+                <div id="artifactEditorLocationChipList" class="tag-chip-list" aria-live="polite"></div>
+                <input id="artifactEditorLocationComposer" type="text" placeholder="Type a path and press Enter">
+              </div>
+              <input id="artifactEditorLocation" type="hidden" required>
+            </div>
+            <div class="field">
+              <label for="artifactEditorToolComposer">Tooling</label>
+              <div id="artifactEditorToolTokenField" class="tag-token-field" role="group" aria-label="Artifact tooling">
+                <div id="artifactEditorToolChipList" class="tag-chip-list" aria-live="polite"></div>
+                <input id="artifactEditorToolComposer" type="text" placeholder="Type a tool and press Enter">
+              </div>
+              <input id="artifactEditorTool" type="hidden" required>
+            </div>
+            <div class="field field-wide">
+              <label for="artifactEditorInstructions">Analyst Guidance</label>
+              <textarea id="artifactEditorInstructions" required placeholder="Describe how to triage this artifact."></textarea>
+            </div>
+          </div>
+          <div class="artifact-editor-actions">
+            <button id="artifactEditorResetButton" class="secondary-btn" type="button">Clear</button>
+            <button id="artifactEditorSubmitButton" class="primary-btn" type="submit">Add artifact</button>
+          </div>
+        </form>
+
+        <div class="artifact-editor-list-wrap">
+          <div class="artifact-editor-list-head">
+            <p class="summary-title">Existing artifacts</p>
+            <p id="artifactEditorHint" class="advanced-note">Select Edit to load an artifact into the form.</p>
+          </div>
+          <div id="artifactEditorList" class="artifact-editor-list" role="list" aria-live="polite"></div>
+        </div>
+      </section>
+    </section>
+    </div>
+  </main>
+
+  <div id="artifactOverlay" class="overlay" hidden>
+    <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
+      <div class="overlay-header">
+        <div class="overlay-title-block">
+          <p class="summary-title">Focused Artifact View</p>
+          <h2 id="overlayTitle" class="overlay-title"></h2>
+          <p id="overlaySubtitle" class="overlay-subtitle"></p>
+        </div>
+        <button id="overlayCloseButton" class="overlay-close" type="button">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <path d="M12.5 4.5L6 11"></path>
+            <path d="M6 9h8v8"></path>
+          </svg>
+          Back to checklist
+        </button>
+      </div>
+      <div id="overlayContent" class="overlay-content"></div>
+    </div>
+  </div>
+
+  <div id="resetDialog" class="overlay" hidden>
+    <div class="overlay-panel confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="resetDialogTitle" aria-describedby="resetDialogMessage">
+      <div class="overlay-header">
+        <div class="overlay-title-block">
+          <p class="summary-title">Reset Saved State</p>
+          <h2 id="resetDialogTitle" class="overlay-title">Clear checklist progress?</h2>
+        </div>
+        <button id="resetDialogCloseButton" class="overlay-close" type="button">Cancel</button>
+      </div>
+      <div class="confirm-body">
+        <p id="resetDialogMessage" class="confirm-copy">
+          This removes all locally saved found markers and analyst comments from this browser for the current checklist.
+        </p>
+        <div class="confirm-warning">
+          Export notes first if you need a copy. This action updates local storage immediately and cannot be undone from the page.
+        </div>
+        <div class="confirm-actions">
+          <button id="resetDialogCancelButton" class="secondary-btn" type="button">Keep saved state</button>
+          <button id="resetDialogConfirmButton" class="danger-btn" type="button">Delete saved data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="detailInsertDialog" class="overlay" hidden>
+    <div class="overlay-panel confirm-panel" role="dialog" aria-modal="true" aria-labelledby="detailInsertTitle">
+      <div class="overlay-header">
+        <div class="overlay-title-block">
+          <p class="summary-title">Insert Detail</p>
+          <h2 id="detailInsertTitle" class="overlay-title">Add structured finding</h2>
+        </div>
+        <button id="detailInsertCloseButton" class="overlay-close" type="button">Close</button>
+      </div>
+      <form id="detailInsertForm" class="confirm-body detail-insert-form">
+        <p class="confirm-copy">Fill any fields you found. Empty fields will be ignored.</p>
+        <div class="detail-insert-grid">
+          <div class="field">
+            <label for="detailPath">Path</label>
+            <input id="detailPath" data-detail-input="path" type="text" autocomplete="off" placeholder="C:\\Path\\To\\Artifact.exe">
+          </div>
+          <div class="field">
+            <label for="detailRegistry">Registry</label>
+            <input id="detailRegistry" data-detail-input="registry" type="text" autocomplete="off" placeholder="HKCU\\Software\\...">
+          </div>
+          <div class="field">
+            <label for="detailHash">SHA256</label>
+            <input id="detailHash" data-detail-input="hash" type="text" autocomplete="off" placeholder="abcdef1234...">
+          </div>
+          <div class="field">
+            <label for="detailIp">IP/Domain/URL</label>
+            <input id="detailIp" data-detail-input="ip" type="text" autocomplete="off" placeholder="10.10.10.5 or suspicious.example">
+          </div>
+          <div class="field">
+            <label for="detailUser">Username</label>
+            <input id="detailUser" data-detail-input="user" type="text" autocomplete="off" placeholder="DOMAIN\\username">
+          </div>
+          <div class="field">
+            <label for="detailProcess">Process</label>
+            <input id="detailProcess" data-detail-input="process" type="text" autocomplete="off" placeholder="powershell.exe -enc ...">
+          </div>
+          <div class="field">
+            <label for="detailService">Service/Task</label>
+            <input id="detailService" data-detail-input="service" type="text" autocomplete="off" placeholder="TaskName / ServiceName">
+          </div>
+          <div class="field">
+            <label for="detailTimestamp">Timestamp</label>
+            <input id="detailTimestamp" data-detail-input="timestamp" type="text" autocomplete="off" placeholder="2026-03-26 14:33 UTC">
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button id="detailInsertCancelButton" class="secondary-btn" type="button">Cancel</button>
+          <button class="primary-btn" type="submit">Insert</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="shortcutDialog" class="overlay" hidden>
+    <div class="overlay-panel confirm-panel" role="dialog" aria-modal="true" aria-labelledby="shortcutDialogTitle">
+      <div class="overlay-header">
+        <div class="overlay-title-block">
+          <p class="summary-title">Keyboard Shortcuts</p>
+          <h2 id="shortcutDialogTitle" class="overlay-title">Checklist shortcuts</h2>
+        </div>
+        <button id="shortcutDialogCloseButton" class="overlay-close" type="button">Close</button>
+      </div>
+      <div class="confirm-body shortcut-list">
+        <p><strong>/</strong> focus search</p>
+        <p><strong>g</strong> switch to grid view</p>
+        <p><strong>l</strong> switch to list view</p>
+        <p><strong>e</strong> export notes with selected scope</p>
+        <p><strong>r</strong> open reset dialog</p>
+        <p><strong>?</strong> open shortcuts dialog</p>
+        <p><strong>Esc</strong> close open dialogs</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/checklist-data.js"></script>
+  <script src="assets/dfir-checklist.js"></script>
+</body>
+</html>
