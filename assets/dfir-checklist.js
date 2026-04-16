@@ -24,6 +24,10 @@ const resetDialog = document.getElementById("resetDialog");
 const resetDialogConfirmButton = document.getElementById("resetDialogConfirmButton");
 const resetDialogCancelButton = document.getElementById("resetDialogCancelButton");
 const resetDialogCloseButton = document.getElementById("resetDialogCloseButton");
+const aiClearHistoryDialog = document.getElementById("aiClearHistoryDialog");
+const aiClearHistoryDialogConfirmButton = document.getElementById("aiClearHistoryDialogConfirmButton");
+const aiClearHistoryDialogCancelButton = document.getElementById("aiClearHistoryDialogCancelButton");
+const aiClearHistoryDialogCloseButton = document.getElementById("aiClearHistoryDialogCloseButton");
 const detailInsertDialog = document.getElementById("detailInsertDialog");
 const detailInsertForm = document.getElementById("detailInsertForm");
 const detailInputElements = Array.from(document.querySelectorAll("[data-detail-input]"));
@@ -49,6 +53,72 @@ const appNavButtons = Array.from(document.querySelectorAll('[data-action="switch
 const overviewView = document.getElementById("overviewView");
 const casesView = document.getElementById("casesView");
 const artifactsView = document.getElementById("artifactsView");
+const aiView = document.getElementById("aiView");
+const aiModelSelect = document.getElementById("aiModelSelect");
+const aiContextLengthInput = document.getElementById("aiContextLengthInput");
+const aiContextLengthSlider = document.getElementById("aiContextLengthSlider");
+const aiContextMinLabel = document.getElementById("aiContextMinLabel");
+const aiContextMaxLabel = document.getElementById("aiContextMaxLabel");
+const aiContextHint = document.getElementById("aiContextHint");
+const aiModelRefreshButton = document.getElementById("aiModelRefreshButton");
+const aiSessionPill = document.getElementById("aiSessionPill");
+const aiSessionToggleButton = document.getElementById("aiSessionToggleButton");
+const aiSessionRefreshButton = document.getElementById("aiSessionRefreshButton");
+const aiRuntimeSections = document.getElementById("aiRuntimeSections");
+const aiModelLoadingPlaceholder = document.getElementById("aiModelLoadingPlaceholder");
+const aiModelLoadingCopy = document.getElementById("aiModelLoadingCopy");
+const aiModelLoadingElapsed = document.getElementById("aiModelLoadingElapsed");
+const aiBackendStatusText = document.getElementById("aiBackendStatusText");
+const aiBackendStatusLabel = document.getElementById("aiBackendStatusLabel");
+const aiEvidencePathInput = document.getElementById("aiEvidencePathInput");
+const aiExecutionTargetInput = document.getElementById("aiExecutionTargetInput");
+const aiIocInput = document.getElementById("aiIocInput");
+const aiMcpOrdersInput = document.getElementById("aiMcpOrdersInput");
+const aiArtifactSelectionList = document.getElementById("aiArtifactSelectionList");
+const aiSelectedArtifactsCopy = document.getElementById("aiSelectedArtifactsCopy");
+const aiSelectAllArtifactsButton = document.getElementById("aiSelectAllArtifactsButton");
+const aiClearArtifactsButton = document.getElementById("aiClearArtifactsButton");
+const aiToggleAllMitreButton = document.getElementById("aiToggleAllMitreButton");
+const aiOpenChatButton = document.getElementById("aiOpenChatButton");
+const aiAnalyzeButton = document.getElementById("aiAnalyzeButton");
+const aiInvestigationOutputSection = document.getElementById("aiInvestigationOutputSection");
+const aiInlineChatComposer = document.getElementById("aiInlineChatComposer");
+const aiInlineChatInput = document.getElementById("aiInlineChatInput");
+const aiInlineChatApplyUpdatesCheckbox = document.getElementById("aiInlineChatApplyUpdatesCheckbox");
+const aiInlineChatSendButton = document.getElementById("aiInlineChatSendButton");
+const aiInlineChatClearHistoryButton = document.getElementById("aiInlineChatClearHistoryButton");
+const aiChatHistory = document.getElementById("aiChatHistory");
+const aiStatusText = document.getElementById("aiStatusText");
+const aiTokenChunksText = document.getElementById("aiTokenChunksText");
+const aiProcessingStatus = document.getElementById("aiProcessingStatus");
+const aiProcessingStatusLabel = document.getElementById("aiProcessingStatusLabel");
+const aiProcessingStatusPercent = document.getElementById("aiProcessingStatusPercent");
+const aiProcessingStatusTrack = document.getElementById("aiProcessingStatusTrack");
+const aiProcessingStatusBar = document.getElementById("aiProcessingStatusBar");
+const aiModelLoadedText = document.getElementById("aiModelLoadedText");
+const aiThinkingCard = document.getElementById("aiThinkingCard");
+const aiThinkingStatusLabel = document.getElementById("aiThinkingStatusLabel");
+const aiThinkingToggleButton = document.getElementById("aiThinkingToggleButton");
+const aiThinkingOutput = document.getElementById("aiThinkingOutput");
+const aiFindingsOutput = document.getElementById("aiFindingsOutput");
+const aiPromptEditorButton = document.getElementById("aiPromptEditorButton");
+const aiPromptDialog = document.getElementById("aiPromptDialog");
+const aiPromptDialogCloseButton = document.getElementById("aiPromptDialogCloseButton");
+const aiPromptDialogCancelButton = document.getElementById("aiPromptDialogCancelButton");
+const aiPromptDialogResetButton = document.getElementById("aiPromptDialogResetButton");
+const aiPromptDialogSaveButton = document.getElementById("aiPromptDialogSaveButton");
+const aiSystemPromptInput = document.getElementById("aiSystemPromptInput");
+const aiUserPromptInput = document.getElementById("aiUserPromptInput");
+const aiPromptPreviewOutput = document.getElementById("aiPromptPreviewOutput");
+
+const AI_DEFAULTS = {
+  backendBaseUrl: "http://127.0.0.1:8787",
+  launcherBaseUrl: "http://127.0.0.1:8790",
+  lmstudioBaseUrl: "http://127.0.0.1:1234/v1",
+  contextLength: 0,
+  idleTimeoutMinutes: 20,
+  mcpCommand: "/home/rem/Desktop/Checklist/winforensics-mcp/.venv/bin/python -m winforensics_mcp.server"
+};
 const artifactEditorForm = document.getElementById("artifactEditorForm");
 const artifactEditorIdInput = document.getElementById("artifactEditorId");
 const artifactEditorOsInput = document.getElementById("artifactEditorOs");
@@ -95,8 +165,10 @@ const artifactDataStorageKey = "dfir-checklist-artifacts-v1";
 
 let overlayCloseTimer = 0;
 let resetDialogCloseTimer = 0;
+let aiClearHistoryDialogCloseTimer = 0;
 let detailDialogCloseTimer = 0;
 let shortcutDialogCloseTimer = 0;
+let aiPromptDialogCloseTimer = 0;
 let tutorialDialogCloseTimer = 0;
 let filterRenderTimer = 0;
 let filterPersistTimer = 0;
@@ -108,6 +180,30 @@ let activeOverlayArtifactId = null;
 let activeTutorialArtifactId = null;
 let showTutorialBranches = false;
 let activeTutorialTool = "";
+let aiSessionStatus = { active: false };
+let aiBackendOnline = false;
+let aiBackendPollTimer = 0;
+let aiIsStartingSession = false;
+let aiPromptOverrides = {
+  systemPromptOverride: "",
+  userPromptOverride: ""
+};
+let aiPromptPreviewTimer = 0;
+let aiModelLoadTimer = 0;
+let aiModelLoadStartedAt = 0;
+let aiModelContextSpecs = new Map();
+let aiContextSliderDragging = false;
+const aiSelectedArtifactIds = new Set();
+const aiCollapsedMitreGroups = new Set();
+const aiSeenMitreGroups = new Set();
+let aiThinkingCollapsed = false;
+let aiActiveAnalyzeAbortController = null;
+let aiAnalyzeInProgress = false;
+let aiUiBusy = false;
+let aiNextAnalyzeResponseMode = "";
+let aiNextAnalyzeOrdersOverride = "";
+let aiNextAnalyzeSelectedArtifactsOverride = null;
+let aiConversationHistory = [];
 let artifactEditorOsChips = [];
 let artifactEditorMitreChips = [];
 let artifactEditorTagChips = [];
@@ -137,6 +233,51 @@ const tutorialMapState = {
 const expandedArtifactIds = new Set();
 const sectionRegistry = new Map();
 const artifactRegistry = new Map();
+
+if (window.location.protocol === "file:") {
+  const target = "http://127.0.0.1:8790/dfir-checklist.html";
+  if (window.location.href !== target) {
+    window.location.replace(target);
+  }
+}
+
+if (aiRuntimeSections) {
+  aiRuntimeSections.classList.remove("is-visible");
+  aiRuntimeSections.setAttribute("aria-hidden", "true");
+}
+
+if (aiModelLoadingPlaceholder) {
+  aiModelLoadingPlaceholder.classList.add("is-hidden");
+}
+
+if (aiModelLoadingElapsed) {
+  aiModelLoadingElapsed.textContent = "0.0s";
+}
+
+function startAiModelLoadTimer() {
+  aiModelLoadStartedAt = performance.now();
+  if (aiModelLoadTimer) {
+    window.clearInterval(aiModelLoadTimer);
+  }
+
+  aiModelLoadTimer = window.setInterval(() => {
+    if (!aiModelLoadingElapsed) {
+      return;
+    }
+    const elapsedSeconds = (performance.now() - aiModelLoadStartedAt) / 1000;
+    aiModelLoadingElapsed.textContent = `${elapsedSeconds.toFixed(1)}s`;
+  }, 100);
+}
+
+function stopAiModelLoadTimer() {
+  if (aiModelLoadTimer) {
+    window.clearInterval(aiModelLoadTimer);
+    aiModelLoadTimer = 0;
+  }
+  if (aiModelLoadingElapsed) {
+    aiModelLoadingElapsed.textContent = "0.0s";
+  }
+}
 
 loadPersistedArtifacts();
 
@@ -333,19 +474,117 @@ function isStrictTagMatch(item, selectedTag) {
 }
 
 function normalizeArtifactStatus(rawStatus, legacyFound = false) {
-  if (artifactStatuses[rawStatus]) {
-    return rawStatus;
+  const normalized = String(rawStatus || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+
+  if (artifactStatuses[normalized]) {
+    return normalized;
   }
 
-  if (rawStatus === "found") {
+  if (["found", "done", "complete", "completed", "comlpeted", "resolved", "closed"].includes(normalized)) {
     return "completed";
   }
 
-  if (rawStatus === "pending") {
+  if (["needs-review", "needs-investigation", "needs-investigaiton", "review", "investigate", "needsinvestigation"].includes(normalized)) {
+    return "needs-review";
+  }
+
+  if (["in-progress", "progress", "started", "working"].includes(normalized)) {
+    return "in-progress";
+  }
+
+  if (["pending", "todo", "not-started", "notstarted", "new", "n/a", "na"].includes(normalized)) {
     return "not-started";
   }
 
   return legacyFound ? "completed" : "not-started";
+}
+
+function normalizeLooseText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findChecklistItemForAiUpdate(update) {
+  const updateArtifactRaw = String(update?.artifact || update?.artifact_id || update?.id || "").trim();
+  if (!updateArtifactRaw) {
+    return null;
+  }
+
+  const exactId = checklistData.find((entry) => String(entry.id || "").trim() === updateArtifactRaw);
+  if (exactId) {
+    return exactId;
+  }
+
+  const updateLoose = normalizeLooseText(updateArtifactRaw);
+  if (!updateLoose) {
+    return null;
+  }
+
+  const exactName = checklistData.find((entry) => normalizeLooseText(entry.artifact) === updateLoose);
+  if (exactName) {
+    return exactName;
+  }
+
+  const containsMatch = checklistData.find((entry) => {
+    const candidate = normalizeLooseText(entry.artifact);
+    return candidate.includes(updateLoose) || updateLoose.includes(candidate);
+  });
+  if (containsMatch) {
+    return containsMatch;
+  }
+
+  return null;
+}
+
+function isGenericEvidenceText(text) {
+  const normalized = normalizeLooseText(text);
+  if (!normalized) {
+    return true;
+  }
+
+  const genericPhrases = [
+    "suspicious path",
+    "possible indicator",
+    "general anomaly",
+    "potentially malicious",
+    "review recommended",
+    "see logs",
+    "no specific evidence"
+  ];
+
+  return genericPhrases.some((phrase) => normalized.includes(phrase));
+}
+
+function getMcpEvidenceForArtifact(item, mcpActivity) {
+  if (!item || !mcpActivity || !Array.isArray(mcpActivity.trace)) {
+    return [];
+  }
+
+  const itemId = String(item.id || "").trim();
+  const itemName = normalizeLooseText(item.artifact);
+
+  return mcpActivity.trace
+    .filter((entry) => entry && typeof entry === "object")
+    .filter((entry) => {
+      const traceId = String(entry.artifact_id || "").trim();
+      const traceName = normalizeLooseText(entry.artifact || "");
+      return traceId === itemId || (itemName && traceName && (traceName.includes(itemName) || itemName.includes(traceName)));
+    })
+    .map((entry) => {
+      const tool = String(entry.tool || "mcp-tool").trim();
+      const excerpt = String(entry.result_excerpt || "").trim();
+      if (!excerpt || isGenericEvidenceText(excerpt)) {
+        return "";
+      }
+      const firstLine = excerpt.split(/\r?\n/)[0].slice(0, 280).trim();
+      return firstLine ? `${tool}: ${firstLine}` : "";
+    })
+    .filter(Boolean)
+    .slice(0, 4);
 }
 
 function normalizeFilterStatus(rawStatus) {
@@ -492,14 +731,28 @@ function sanitizeCollapsedSections(input) {
   return sanitized;
 }
 
+function getDefaultCollapsedSections() {
+  const collapsed = {};
+  mitreOrder.forEach((mitreName) => {
+    if (mitreName) {
+      collapsed[mitreName] = true;
+    }
+  });
+  return collapsed;
+}
+
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    const persistedCollapsed = sanitizeCollapsedSections(parsed.collapsedSections);
     return {
       entries: typeof parsed.entries === "object" && parsed.entries ? parsed.entries : {},
       viewMode: parsed.viewMode === "list" ? "list" : "grid",
       filters: sanitizeFilters(parsed.filters),
-      collapsedSections: sanitizeCollapsedSections(parsed.collapsedSections),
+      collapsedSections: {
+        ...getDefaultCollapsedSections(),
+        ...persistedCollapsed
+      },
       advancedFiltersOpen: Boolean(parsed.advancedFiltersOpen),
       lastSavedAt: typeof parsed.lastSavedAt === "string" ? parsed.lastSavedAt : ""
     };
@@ -508,7 +761,7 @@ function loadState() {
       entries: {},
       viewMode: "grid",
       filters: getDefaultFilters(),
-      collapsedSections: {},
+      collapsedSections: getDefaultCollapsedSections(),
       advancedFiltersOpen: false,
       lastSavedAt: ""
     };
@@ -995,6 +1248,63 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function renderInlineMarkdown(value) {
+  const escaped = escapeHtml(value ?? "");
+  return escaped
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+}
+
+function renderSimpleMarkdown(value) {
+  const normalized = normalizeMojibakeText(String(value ?? "")).replace(/\r\n/g, "\n").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const lines = normalized.split("\n");
+  const htmlParts = [];
+  let listItems = [];
+
+  const flushList = () => {
+    if (!listItems.length) {
+      return;
+    }
+    htmlParts.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+    listItems = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = String(rawLine || "").trim();
+    if (!line) {
+      flushList();
+      return;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      listItems.push(renderInlineMarkdown(line.replace(/^[-*]\s+/, "")));
+      return;
+    }
+
+    flushList();
+
+    if (/^###\s+/.test(line)) {
+      htmlParts.push(`<h5>${renderInlineMarkdown(line.replace(/^###\s+/, ""))}</h5>`);
+      return;
+    }
+
+    if (/^##\s+/.test(line) || /^#\s+/.test(line)) {
+      htmlParts.push(`<h4>${renderInlineMarkdown(line.replace(/^#{1,2}\s+/, ""))}</h4>`);
+      return;
+    }
+
+    htmlParts.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  });
+
+  flushList();
+  return htmlParts.join("");
+}
+
 function refineGuidanceText(text) {
   return String(text ?? "")
     .replace(/^בדוק/g, "בדקו")
@@ -1015,7 +1325,8 @@ function findItemById(id) {
 
 function syncBodyScrollLock() {
   const tutorialOpen = Boolean(tutorialDialog && !tutorialDialog.hidden);
-  document.body.style.overflow = !artifactOverlay.hidden || !resetDialog.hidden || !detailInsertDialog.hidden || !shortcutDialog.hidden || tutorialOpen ? "hidden" : "";
+  const promptDialogOpen = Boolean(aiPromptDialog && !aiPromptDialog.hidden);
+  document.body.style.overflow = !artifactOverlay.hidden || !resetDialog.hidden || !aiClearHistoryDialog.hidden || !detailInsertDialog.hidden || !shortcutDialog.hidden || promptDialogOpen || tutorialOpen ? "hidden" : "";
 }
 
 function rememberFocus() {
@@ -1039,8 +1350,16 @@ function getTopOpenDialog() {
     return tutorialDialog;
   }
 
+  if (aiPromptDialog && !aiPromptDialog.hidden) {
+    return aiPromptDialog;
+  }
+
   if (!resetDialog.hidden) {
     return resetDialog;
+  }
+
+  if (!aiClearHistoryDialog.hidden) {
+    return aiClearHistoryDialog;
   }
 
   if (!detailInsertDialog.hidden) {
@@ -1186,6 +1505,46 @@ function closeResetDialog() {
     syncBodyScrollLock();
     restoreFocus();
   }, overlayTransitionMs);
+}
+
+function openAiClearHistoryDialog() {
+  if (!aiClearHistoryDialog) {
+    return;
+  }
+
+  rememberFocus();
+  window.clearTimeout(aiClearHistoryDialogCloseTimer);
+  aiClearHistoryDialog.hidden = false;
+
+  requestAnimationFrame(() => {
+    aiClearHistoryDialog.classList.add("is-open");
+    syncBodyScrollLock();
+    aiClearHistoryDialogCancelButton?.focus();
+  });
+}
+
+function closeAiClearHistoryDialog() {
+  if (!aiClearHistoryDialog || aiClearHistoryDialog.hidden) {
+    return;
+  }
+
+  aiClearHistoryDialog.classList.remove("is-open");
+  window.clearTimeout(aiClearHistoryDialogCloseTimer);
+
+  aiClearHistoryDialogCloseTimer = window.setTimeout(() => {
+    aiClearHistoryDialog.hidden = true;
+    syncBodyScrollLock();
+    restoreFocus();
+  }, overlayTransitionMs);
+}
+
+function clearAiConversationHistory() {
+  aiConversationHistory = [];
+  renderAiConversationHistory();
+  if (aiStatusText) {
+    aiStatusText.textContent = "Chat history cleared. Starting a new chat.";
+  }
+  aiInlineChatInput?.focus();
 }
 
 function openDetailInsertDialog(artifactId) {
@@ -2753,13 +3112,14 @@ function clearFilters() {
 }
 
 function setAppView(viewName) {
-  const nextView = ["overview", "cases", "artifacts"].includes(viewName) ? viewName : "cases";
+  const nextView = ["overview", "cases", "artifacts", "ai"].includes(viewName) ? viewName : "cases";
   activeAppView = nextView;
 
   const views = {
     overview: overviewView,
     cases: casesView,
-    artifacts: artifactsView
+    artifacts: artifactsView,
+    ai: aiView
   };
 
   Object.entries(views).forEach(([key, element]) => {
@@ -2791,6 +3151,1380 @@ function setSidebarOpen(open) {
 
 function toggleSidebar() {
   setSidebarOpen(!isSidebarOpen);
+}
+
+function getAiBackendBaseUrl() {
+  return AI_DEFAULTS.backendBaseUrl;
+}
+
+function getAiLauncherBaseUrl() {
+  return AI_DEFAULTS.launcherBaseUrl;
+}
+
+function getAiLauncherCandidateBaseUrls() {
+  const primary = getAiLauncherBaseUrl();
+  const candidates = [primary];
+
+  if (primary.includes("127.0.0.1")) {
+    candidates.push(primary.replace("127.0.0.1", "localhost"));
+  } else if (primary.includes("localhost")) {
+    candidates.push(primary.replace("localhost", "127.0.0.1"));
+  }
+
+  return [...new Set(candidates)];
+}
+
+function parseCommandLine(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return {
+      command: "/home/rem/Desktop/Checklist/winforensics-mcp/.venv/bin/python",
+      args: ["-m", "winforensics_mcp.server"]
+    };
+  }
+
+  const parts = text.match(/(?:[^"]\S*|".+?")+/g) || [];
+  const normalized = parts.map((part) => part.replace(/^"|"$/g, ""));
+  return {
+    command: normalized[0] || "uv",
+    args: normalized.slice(1)
+  };
+}
+
+async function aiRequest(path, method = "GET", body) {
+  const endpoint = `${getAiBackendBaseUrl()}${path}`;
+  const response = await fetch(endpoint, {
+    method,
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.detail || payload?.error || `Request failed (${response.status})`);
+  }
+
+  return payload;
+}
+
+function stripThinkTagsForThinking(text) {
+  return String(text || "").replace(/<\/?think(?:ing)?>/gi, "");
+}
+
+function stripThinkBlocksForFinal(text) {
+  return String(text || "").replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi, "");
+}
+
+function extractThinkingBlocks(text) {
+  const source = String(text || "");
+  const matches = source.match(/<think(?:ing)?>([\s\S]*?)<\/think(?:ing)?>/gi) || [];
+  if (!matches.length) {
+    return "";
+  }
+  return matches
+    .map((block) => stripThinkTagsForThinking(block).trim())
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function buildAiAnalyzePayload() {
+  const overrideOrders = typeof aiNextAnalyzeOrdersOverride === "string" ? aiNextAnalyzeOrdersOverride.trim() : "";
+  const freeTextOrders = overrideOrders || aiMcpOrdersInput?.value?.trim() || "";
+  const hasFreeTextOrders = Boolean(freeTextOrders);
+  const inlineCheckboxMode = aiInlineChatApplyUpdatesCheckbox?.checked ? "checklist" : "chat";
+  const responseMode = aiNextAnalyzeResponseMode || (hasFreeTextOrders ? inlineCheckboxMode : "checklist");
+  const selectedArtifacts = Array.isArray(aiNextAnalyzeSelectedArtifactsOverride)
+    ? aiNextAnalyzeSelectedArtifactsOverride
+    : getSelectedArtifactsForAnalyze();
+  return {
+    evidence_path: aiEvidencePathInput?.value?.trim() || "",
+    execution_target: aiExecutionTargetInput?.value?.trim() || "",
+    ioc: aiIocInput?.value?.trim() || "",
+    mcp_orders: freeTextOrders,
+    artifacts: checklistData.map((item) => ({
+      id: item.id,
+      artifact: item.artifact,
+      mitre: item.mitre,
+      os: item.os,
+      tags: item.tags,
+      tool: item.tool,
+      location: item.location
+    })),
+    selected_artifacts: selectedArtifacts,
+    thinking_mode: "enabled",
+    response_mode: responseMode,
+    chat_history: normalizeAiHistoryEntries(aiConversationHistory),
+    system_prompt_override: aiPromptOverrides.systemPromptOverride || "",
+    user_prompt_override: aiPromptOverrides.userPromptOverride || ""
+  };
+}
+
+async function refreshAiPromptPreview() {
+  if (!aiPromptPreviewOutput) {
+    return;
+  }
+
+  aiPromptPreviewOutput.textContent = "Loading prompt preview...";
+
+  try {
+    const payload = await aiRequest("/api/ai/analyze/prompt-preview", "POST", buildAiAnalyzePayload());
+    aiPromptPreviewOutput.textContent = JSON.stringify(payload, null, 2);
+  } catch (error) {
+    aiPromptPreviewOutput.textContent = `Prompt preview failed: ${error.message}`;
+  }
+}
+
+function openAiPromptDialog() {
+  if (!aiPromptDialog) {
+    return;
+  }
+
+  rememberFocus();
+  window.clearTimeout(aiPromptDialogCloseTimer);
+
+  if (aiSystemPromptInput) {
+    aiSystemPromptInput.value = aiPromptOverrides.systemPromptOverride || "";
+  }
+  if (aiUserPromptInput) {
+    aiUserPromptInput.value = aiPromptOverrides.userPromptOverride || "";
+  }
+
+  aiPromptDialog.hidden = false;
+  requestAnimationFrame(() => {
+    aiPromptDialog.classList.add("is-open");
+    syncBodyScrollLock();
+    aiSystemPromptInput?.focus();
+  });
+  refreshAiPromptPreview();
+}
+
+function closeAiPromptDialog() {
+  if (!aiPromptDialog || aiPromptDialog.hidden) {
+    return;
+  }
+
+  aiPromptDialog.classList.remove("is-open");
+  window.clearTimeout(aiPromptDialogCloseTimer);
+
+  aiPromptDialogCloseTimer = window.setTimeout(() => {
+    aiPromptDialog.hidden = true;
+    syncBodyScrollLock();
+    restoreFocus();
+  }, overlayTransitionMs);
+}
+
+function parseSseChunk(rawEvent) {
+  const lines = rawEvent
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let eventName = "message";
+  const dataLines = [];
+
+  lines.forEach((line) => {
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim() || "message";
+      return;
+    }
+    if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trim());
+    }
+  });
+
+  let payload = {};
+  if (dataLines.length) {
+    try {
+      payload = JSON.parse(dataLines.join("\n"));
+    } catch {
+      payload = { raw: dataLines.join("\n") };
+    }
+  }
+
+  return { eventName, payload };
+}
+
+function normalizeMojibakeText(text) {
+  const value = String(text || "");
+  return value
+    .replace(/â¯/g, " ")
+    .replace(/â/g, "-")
+    .replace(/â|â/g, "-")
+    .replace(/â/g, "'")
+    .replace(/â|â/g, '"')
+    .replace(/â¦/g, "...")
+    .replace(/Â/g, "");
+}
+
+function renderSimpleMarkdown(markdownText) {
+  const normalized = normalizeMojibakeText(markdownText).replace(/\r\n/g, "\n");
+  const lines = normalized.split("\n");
+  const htmlLines = [];
+  let inList = false;
+  let inTable = false;
+
+  const closeList = () => {
+    if (inList) {
+      htmlLines.push("</ul>");
+      inList = false;
+    }
+  };
+
+  const closeTable = () => {
+    if (inTable) {
+      htmlLines.push("</tbody></table>");
+      inTable = false;
+    }
+  };
+
+  const inline = (text) => {
+    let out = escapeHtml(text);
+    out = out.replace(/`([^`]+)`/g, "<code>$1</code>");
+    out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    return out;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      closeList();
+      closeTable();
+      continue;
+    }
+
+    if (/^\|.*\|$/.test(line)) {
+      closeList();
+      const cells = line.split("|").slice(1, -1).map((cell) => inline(cell.trim()));
+      const isSeparator = cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/<[^>]+>/g, "")));
+
+      if (!inTable && !isSeparator) {
+        htmlLines.push("<table><tbody>");
+        inTable = true;
+      }
+
+      if (inTable && !isSeparator) {
+        htmlLines.push(`<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`);
+      }
+      continue;
+    }
+
+    closeTable();
+
+    const listMatch = line.match(/^[-*]\s+(.*)$/);
+    if (listMatch) {
+      if (!inList) {
+        htmlLines.push("<ul>");
+        inList = true;
+      }
+      htmlLines.push(`<li>${inline(listMatch[1])}</li>`);
+      continue;
+    }
+
+    closeList();
+
+    const h2Match = line.match(/^##\s+(.*)$/);
+    if (h2Match) {
+      htmlLines.push(`<h4>${inline(h2Match[1])}</h4>`);
+      continue;
+    }
+
+    const h3Match = line.match(/^###\s+(.*)$/);
+    if (h3Match) {
+      htmlLines.push(`<h5>${inline(h3Match[1])}</h5>`);
+      continue;
+    }
+
+    htmlLines.push(`<p>${inline(line)}</p>`);
+  }
+
+  closeList();
+  closeTable();
+  return htmlLines.join("");
+}
+
+async function aiAnalyzeRequestStream(body, handlers = {}, signal) {
+  const endpoint = `${getAiBackendBaseUrl()}/api/ai/analyze/stream`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body),
+    signal
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload?.detail || payload?.error || `Request failed (${response.status})`);
+  }
+
+  if (!response.body) {
+    throw new Error("Streaming response body is not available in this browser.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+    const chunks = buffer.split(/\r?\n\r?\n/);
+    buffer = chunks.pop() || "";
+
+    chunks.forEach((chunk) => {
+      if (!chunk.trim()) {
+        return;
+      }
+
+      const { eventName, payload } = parseSseChunk(chunk);
+      const handler = handlers[eventName] || handlers.message;
+      if (typeof handler === "function") {
+        handler(payload);
+      }
+    });
+  }
+
+  if (buffer.trim()) {
+    const { eventName, payload } = parseSseChunk(buffer);
+    const handler = handlers[eventName] || handlers.message;
+    if (typeof handler === "function") {
+      handler(payload);
+    }
+  }
+}
+
+
+async function launcherRequest(path, method = "GET", body) {
+  let lastError = "";
+
+  for (const baseUrl of getAiLauncherCandidateBaseUrls()) {
+    const endpoint = `${baseUrl}${path}`;
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        // Avoid custom headers to reduce CORS preflight edge cases.
+        body: body ? JSON.stringify(body) : undefined
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.detail || payload?.error || `Launcher request failed (${response.status})`);
+      }
+
+      return payload;
+    } catch (error) {
+      lastError = error?.message || "Network error";
+    }
+  }
+
+  if (window.location.protocol === "file:") {
+    throw new Error("Firefox blocks file:// pages from calling local HTTP services. Open http://127.0.0.1:8790/dfir-checklist.html instead.");
+  }
+
+  throw new Error(lastError || "Network error");
+}
+
+function setAiBusy(isBusy) {
+  aiUiBusy = Boolean(isBusy);
+  [aiSessionToggleButton, aiSessionRefreshButton]
+    .filter(Boolean)
+    .forEach((button) => {
+      button.disabled = aiUiBusy;
+    });
+
+  updateAiAnalyzeButtonState();
+  updateAiChatButtonState();
+  if (aiInlineChatSendButton) {
+    aiInlineChatSendButton.disabled = aiUiBusy || aiAnalyzeInProgress;
+  }
+  if (aiInlineChatClearHistoryButton) {
+    aiInlineChatClearHistoryButton.disabled = aiUiBusy || aiAnalyzeInProgress;
+  }
+}
+
+function openAiInlineChatComposer() {
+  setAiInvestigationOutputVisible(true, true);
+  if (aiInlineChatComposer) {
+    aiInlineChatComposer.hidden = false;
+  }
+  aiInlineChatInput?.focus();
+  aiInlineChatInput?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (aiStatusText && !aiAnalyzeInProgress) {
+    aiStatusText.textContent = "Chat mode ready. Enter free-text prompt and run.";
+  }
+}
+
+function normalizeAiHistoryEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+
+  const normalized = entries
+    .map((entry) => {
+      const role = String(entry?.role || "").trim().toLowerCase();
+      const content = String(entry?.content || "").trim();
+      if (!content || (role !== "user" && role !== "assistant")) {
+        return null;
+      }
+      return { role, content };
+    })
+    .filter(Boolean);
+
+  return normalized.slice(-12);
+}
+
+function renderAiConversationHistory() {
+  if (!aiChatHistory) {
+    return;
+  }
+
+  if (!aiConversationHistory.length) {
+    aiChatHistory.innerHTML = "";
+    return;
+  }
+
+  aiChatHistory.innerHTML = aiConversationHistory
+    .map((entry) => {
+      const role = entry.role === "user" ? "You" : "Assistant";
+      const rowClass = entry.role === "user" ? "is-user" : "is-assistant";
+      const contentHtml = entry.role === "assistant"
+        ? renderSimpleMarkdown(entry.content || "")
+        : `<pre class="ai-chat-message-content">${escapeHtml(normalizeMojibakeText(entry.content || ""))}</pre>`;
+      return `
+        <article class="ai-chat-message ${rowClass}">
+          <div class="ai-chat-message-role">${escapeHtml(role)}</div>
+          <div class="ai-chat-message-content ai-output-markdown">${contentHtml}</div>
+        </article>
+      `;
+    })
+    .join("");
+
+  aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+}
+
+async function runInlineChatPromptViaAnalyze() {
+  const freeTextPrompt = String(aiInlineChatInput?.value || "").trim();
+  if (!freeTextPrompt) {
+    aiInlineChatInput?.focus();
+    return;
+  }
+
+  const sessionReady = Boolean(aiSessionStatus?.active && aiSessionStatus?.model_loaded);
+  if (!sessionReady) {
+    if (aiStatusText) {
+      aiStatusText.textContent = "Start an AI session first, then run the prompt.";
+    }
+    return;
+  }
+
+  const evidencePath = String(aiEvidencePathInput?.value || "").trim();
+  if (!evidencePath) {
+    if (aiStatusText) {
+      aiStatusText.textContent = "Please provide mounted evidence path.";
+    }
+    aiEvidencePathInput?.focus();
+    return;
+  }
+
+  if (aiAnalyzeInProgress) {
+    if (aiStatusText) {
+      aiStatusText.textContent = "Analysis already running. Stop current run first.";
+    }
+    return;
+  }
+
+  if (aiMcpOrdersInput) {
+    aiMcpOrdersInput.value = freeTextPrompt;
+  }
+
+  const applyUpdates = Boolean(aiInlineChatApplyUpdatesCheckbox?.checked);
+  aiNextAnalyzeOrdersOverride = freeTextPrompt;
+  aiNextAnalyzeResponseMode = applyUpdates ? "checklist" : "chat";
+  // In plain chat mode, prevent sticky artifact selections from causing broad MCP fan-out.
+  aiNextAnalyzeSelectedArtifactsOverride = applyUpdates ? null : [];
+
+  if (aiInlineChatInput) {
+    aiInlineChatInput.value = "";
+    aiInlineChatInput.focus();
+  }
+
+  // Prefer the normal click path; if the control is temporarily disabled/stale,
+  // dispatch the event directly so inline chat still enters the same analyze flow.
+  if (aiAnalyzeButton && !aiAnalyzeButton.disabled) {
+    aiAnalyzeButton.click();
+    return;
+  }
+
+  if (aiAnalyzeButton) {
+    aiAnalyzeButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return;
+  }
+
+  if (aiStatusText) {
+    aiStatusText.textContent = "Analyze control is unavailable.";
+  }
+}
+
+function updateAiChatButtonState() {
+  const sessionReady = Boolean(aiSessionStatus?.active && aiSessionStatus?.model_loaded);
+  if (aiOpenChatButton) {
+    aiOpenChatButton.disabled = aiUiBusy || !sessionReady;
+  }
+}
+
+function setAiInvestigationOutputVisible(isVisible, animate = false) {
+  if (!aiInvestigationOutputSection) {
+    return;
+  }
+
+  const visible = Boolean(isVisible);
+  aiInvestigationOutputSection.classList.toggle("is-hidden", !visible);
+  aiInvestigationOutputSection.setAttribute("aria-hidden", String(!visible));
+
+  if (!visible) {
+    setAiProcessingStatus({ visible: false });
+    if (aiInlineChatComposer) {
+      aiInlineChatComposer.hidden = true;
+    }
+  } else if (aiInlineChatComposer) {
+    aiInlineChatComposer.hidden = false;
+  }
+
+  if (visible && animate) {
+    aiInvestigationOutputSection.classList.remove("is-revealing");
+    void aiInvestigationOutputSection.offsetWidth;
+    aiInvestigationOutputSection.classList.add("is-revealing");
+  } else {
+    aiInvestigationOutputSection.classList.remove("is-revealing");
+  }
+}
+
+function setAiProcessingStatus(options = {}) {
+  if (!aiProcessingStatus || !aiProcessingStatusTrack) {
+    return;
+  }
+
+  const visible = options.visible !== false;
+  if (!visible) {
+    aiProcessingStatus.hidden = true;
+    aiProcessingStatusTrack.classList.remove("is-indeterminate");
+    return;
+  }
+
+  const label = String(options.label || "Processing prompt...").trim() || "Processing prompt...";
+  const rawPercent = Number(options.percent);
+  const safePercent = Number.isFinite(rawPercent) ? Math.max(0, Math.min(100, Math.round(rawPercent))) : 0;
+  const indeterminate = Boolean(options.indeterminate);
+
+  aiProcessingStatus.hidden = false;
+
+  if (aiProcessingStatusLabel) {
+    aiProcessingStatusLabel.textContent = label;
+  }
+  if (aiProcessingStatusPercent) {
+    aiProcessingStatusPercent.textContent = `${safePercent}%`;
+  }
+
+  aiProcessingStatusTrack.setAttribute("aria-valuenow", String(safePercent));
+  aiProcessingStatusTrack.setAttribute("aria-label", label);
+
+  if (indeterminate) {
+    aiProcessingStatusTrack.classList.add("is-indeterminate");
+    return;
+  }
+
+  aiProcessingStatusTrack.classList.remove("is-indeterminate");
+  if (aiProcessingStatusBar) {
+    aiProcessingStatusBar.style.width = `${safePercent}%`;
+  }
+}
+
+function updateAiAnalyzeButtonState() {
+  if (!aiAnalyzeButton) {
+    return;
+  }
+
+  const isRunning = aiAnalyzeInProgress;
+  const sessionReady = Boolean(aiSessionStatus?.active && aiSessionStatus?.model_loaded);
+
+  aiAnalyzeButton.textContent = isRunning ? "Stop analysis" : "Analyze mounted disk";
+  aiAnalyzeButton.title = isRunning ? "Stop current investigation" : "Analyze mounted disk";
+  aiAnalyzeButton.classList.toggle("danger-btn", isRunning);
+  aiAnalyzeButton.classList.toggle("primary-btn", !isRunning);
+  aiAnalyzeButton.disabled = isRunning ? false : (aiUiBusy || !sessionReady);
+}
+
+function setAiAnalyzeRunning(isRunning) {
+  aiAnalyzeInProgress = Boolean(isRunning);
+  updateAiAnalyzeButtonState();
+  if (aiInlineChatSendButton) {
+    aiInlineChatSendButton.disabled = aiUiBusy || aiAnalyzeInProgress;
+  }
+}
+
+
+async function requestAiAnalysisCancel() {
+  try {
+    await aiRequest("/api/ai/analyze/cancel", "POST", {});
+  } catch {
+    // Ignore cancellation request failures because local stream abort is primary.
+  }
+}
+
+function setAiThinkingCollapsed(collapsed) {
+  aiThinkingCollapsed = Boolean(collapsed);
+
+  if (aiThinkingCard) {
+    aiThinkingCard.classList.toggle("is-collapsed", aiThinkingCollapsed);
+  }
+
+  if (aiThinkingToggleButton) {
+    aiThinkingToggleButton.textContent = aiThinkingCollapsed ? "Expand" : "Collapse";
+    aiThinkingToggleButton.setAttribute("aria-expanded", String(!aiThinkingCollapsed));
+    aiThinkingToggleButton.title = aiThinkingCollapsed ? "Expand thinking" : "Collapse thinking";
+  }
+}
+
+aiThinkingToggleButton?.addEventListener("click", () => {
+  setAiThinkingCollapsed(!aiThinkingCollapsed);
+});
+
+function setAiBackendStatus(online, detail = "") {
+  aiBackendOnline = Boolean(online);
+  if (!aiBackendStatusText || !aiBackendStatusLabel) {
+    return;
+  }
+
+  aiBackendStatusText.classList.remove("is-checking", "is-online", "is-offline");
+  aiBackendStatusText.classList.add(aiBackendOnline ? "is-online" : "is-offline");
+  aiBackendStatusLabel.textContent = aiBackendOnline
+    ? "Backend: online"
+    : `Backend: offline${detail ? ` (${detail})` : ""}`;
+}
+
+async function checkBackendHealth() {
+  const healthUrl = `${getAiBackendBaseUrl()}/api/ai/health`;
+  try {
+    const response = await fetch(healthUrl, { cache: "no-store" });
+    if (!response.ok) {
+      setAiBackendStatus(false, `HTTP ${response.status}`);
+      return false;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    setAiBackendStatus(Boolean(payload?.ok), payload?.ok ? "" : "unexpected response");
+    return Boolean(payload?.ok);
+  } catch {
+    setAiBackendStatus(false, "not reachable");
+    return false;
+  }
+}
+
+function startAiBackendPoller() {
+  if (aiBackendPollTimer) {
+    window.clearInterval(aiBackendPollTimer);
+  }
+
+  checkBackendHealth();
+  aiBackendPollTimer = window.setInterval(() => {
+    checkBackendHealth();
+  }, 3000);
+}
+
+async function requestBackendShutdown() {
+  try {
+    await aiRequest("/api/ai/server/shutdown", "POST", {});
+  } catch {
+    // Ignore shutdown request failures; backend may already be down.
+  }
+}
+
+async function requestLauncherStart() {
+  return launcherRequest("/api/launcher/start", "POST", {
+    backend_url: getAiBackendBaseUrl()
+  });
+}
+
+async function requestLauncherStop() {
+  try {
+    await launcherRequest("/api/launcher/stop", "POST", {});
+  } catch {
+    // Ignore launcher stop failures; process may already be stopped.
+  }
+}
+
+async function waitForBackendOnline(timeoutMs = 15000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const isOnline = await checkBackendHealth();
+    if (isOnline) {
+      return true;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+function getSelectedAiModel() {
+  return String(aiModelSelect?.value || "").trim();
+}
+
+function getDefaultContextSpec() {
+  return {
+    min: 256,
+    max: 262144,
+    defaultValue: 8192
+  };
+}
+
+function sanitizeContextSpec(rawSpec) {
+  const fallback = getDefaultContextSpec();
+  const minCandidate = Number.parseInt(String(rawSpec?.min ?? fallback.min), 10);
+  const maxCandidate = Number.parseInt(String(rawSpec?.max ?? fallback.max), 10);
+  const defaultCandidate = Number.parseInt(String(rawSpec?.defaultValue ?? fallback.defaultValue), 10);
+
+  const min = Number.isFinite(minCandidate) && minCandidate > 0 ? minCandidate : fallback.min;
+  const max = Number.isFinite(maxCandidate) && maxCandidate >= min ? maxCandidate : fallback.max;
+  const defaultValue = Number.isFinite(defaultCandidate) && defaultCandidate >= min && defaultCandidate <= max
+    ? defaultCandidate
+    : Math.min(Math.max(fallback.defaultValue, min), max);
+
+  return { min, max, defaultValue };
+}
+
+function getSelectedModelContextSpec() {
+  const modelKey = getSelectedAiModel();
+  if (modelKey && aiModelContextSpecs.has(modelKey)) {
+    return sanitizeContextSpec(aiModelContextSpecs.get(modelKey));
+  }
+  return getDefaultContextSpec();
+}
+
+function getContextStorageKey(modelKey) {
+  return `ai-context-length:${String(modelKey || "").trim()}`;
+}
+
+function formatContextLength(value) {
+  const parsed = Number.parseInt(String(value ?? "").replace(/[^\d]/g, ""), 10);
+  if (!Number.isFinite(parsed)) {
+    return "";
+  }
+  return parsed.toLocaleString("en-US");
+}
+
+function parseContextLength(value) {
+  const cleaned = String(value ?? "").replace(/[^\d]/g, "");
+  return Number.parseInt(cleaned, 10);
+}
+
+function clampContextLength(value, spec = getSelectedModelContextSpec()) {
+  const parsed = parseContextLength(value);
+  const normalized = Number.isFinite(parsed) ? parsed : spec.defaultValue;
+  return Math.max(spec.min, Math.min(spec.max, normalized));
+}
+
+function setContextControlsValue(value, spec = getSelectedModelContextSpec()) {
+  const clamped = clampContextLength(value, spec);
+  if (aiContextLengthInput) {
+    aiContextLengthInput.value = formatContextLength(clamped);
+  }
+  if (aiContextLengthSlider) {
+    aiContextLengthSlider.value = String(clamped);
+  }
+  return clamped;
+}
+
+function setContextInputOnly(value, spec = getSelectedModelContextSpec()) {
+  const clamped = clampContextLength(value, spec);
+  if (aiContextLengthInput) {
+    aiContextLengthInput.value = formatContextLength(clamped);
+  }
+  return clamped;
+}
+
+function commitContextInputValue() {
+  const spec = getSelectedModelContextSpec();
+  const normalized = setContextControlsValue(aiContextLengthInput?.value, spec);
+  persistContextLengthForSelectedModel(normalized);
+  return normalized;
+}
+
+function persistContextLengthForSelectedModel(value) {
+  const modelKey = getSelectedAiModel();
+  if (!modelKey) {
+    return;
+  }
+  const spec = getSelectedModelContextSpec();
+  const clamped = clampContextLength(value, spec);
+  sessionStorage.setItem(getContextStorageKey(modelKey), String(clamped));
+}
+
+function applyContextSpecForSelectedModel(preferredValue = null) {
+  const spec = getSelectedModelContextSpec();
+
+  if (aiContextLengthInput) {
+    aiContextLengthInput.placeholder = `${formatContextLength(spec.defaultValue)}`;
+  }
+
+  if (aiContextLengthSlider) {
+    aiContextLengthSlider.min = String(spec.min);
+    aiContextLengthSlider.max = String(spec.max);
+    aiContextLengthSlider.step = "1";
+  }
+
+  if (aiContextMinLabel) {
+    aiContextMinLabel.textContent = `min ${formatContextLength(spec.min)}`;
+  }
+  if (aiContextMaxLabel) {
+    aiContextMaxLabel.textContent = `max ${formatContextLength(spec.max)}`;
+  }
+  if (aiContextHint) {
+    aiContextHint.textContent = `Use the slider to pick context length within this model's supported range. Default for this model: ${formatContextLength(spec.defaultValue)}.`;
+  }
+
+  const modelKey = getSelectedAiModel();
+  const savedForModel = modelKey ? sessionStorage.getItem(getContextStorageKey(modelKey)) : null;
+  const sourceValue = preferredValue ?? savedForModel ?? aiContextLengthInput?.value ?? spec.defaultValue;
+  const normalized = setContextControlsValue(sourceValue, spec);
+  persistContextLengthForSelectedModel(normalized);
+}
+
+function renderAiModelOptions(models, selectedModel = "") {
+  if (!aiModelSelect) {
+    return;
+  }
+
+  const modelList = Array.isArray(models) ? models : [];
+  const options = ['<option value="">Select model...</option>'];
+  modelList.forEach((model) => {
+    const key = String(model?.key || "").trim();
+    if (!key) {
+      return;
+    }
+
+    const label = String(model?.display_name || key).trim();
+    const isLoaded = Boolean(model?.loaded);
+    const selected = key === selectedModel ? " selected" : "";
+    const loadedSuffix = isLoaded ? " (loaded)" : "";
+    options.push(`<option value="${escapeHtml(key)}"${selected}>${escapeHtml(label + loadedSuffix)}</option>`);
+  });
+
+  aiModelSelect.innerHTML = options.join("");
+}
+
+async function refreshAiModelList() {
+  if (!aiModelSelect) {
+    return;
+  }
+
+  const previous = getSelectedAiModel();
+  aiModelSelect.innerHTML = '<option value="">Loading models...</option>';
+
+  const backendReady = await checkBackendHealth();
+  if (!backendReady) {
+    try {
+      await requestLauncherStart();
+      const online = await waitForBackendOnline(20000);
+      if (!online) {
+        throw new Error("backend still offline");
+      }
+    } catch {
+      aiModelSelect.innerHTML = '<option value="">Backend offline</option>';
+      return;
+    }
+  }
+
+  try {
+    const payload = await aiRequest("/api/ai/models");
+    const models = Array.isArray(payload?.models) ? payload.models : [];
+
+    aiModelContextSpecs = new Map();
+    models.forEach((model) => {
+      const key = String(model?.key || "").trim();
+      if (!key) {
+        return;
+      }
+      aiModelContextSpecs.set(
+        key,
+        sanitizeContextSpec({
+          min: model?.context_min,
+          max: model?.context_max,
+          defaultValue: model?.context_default
+        })
+      );
+    });
+
+    renderAiModelOptions(models, previous || sessionStorage.getItem("ai-model-key") || "");
+    if (!getSelectedAiModel() && models.length) {
+      aiModelSelect.value = String(models[0]?.key || "");
+    }
+
+    if (aiModelSelect.value) {
+      sessionStorage.setItem("ai-model-key", aiModelSelect.value);
+    }
+
+    applyContextSpecForSelectedModel();
+  } catch {
+    aiModelSelect.innerHTML = '<option value="">Unable to fetch models</option>';
+  }
+}
+
+function setAiSessionStatus(status) {
+  aiSessionStatus = status && typeof status === "object" ? status : { active: false };
+  if (aiSessionPill) {
+    const stateText = aiSessionStatus.active ? "running" : "stopped";
+    aiSessionPill.innerHTML = `<strong>Session:</strong> ${escapeHtml(stateText)}`;
+  }
+
+  if (aiModelLoadedText) {
+    const loaded = Boolean(aiSessionStatus.model_loaded);
+    const modelName = String(aiSessionStatus.model || "").trim();
+    aiModelLoadedText.classList.toggle("is-loaded", loaded);
+    aiModelLoadedText.classList.toggle("is-unloaded", !loaded);
+    aiModelLoadedText.textContent = loaded
+      ? `Model memory: loaded (${modelName || "selected model"})`
+      : "Model memory: not loaded";
+  }
+
+  if (aiSessionToggleButton) {
+    const isActive = Boolean(aiSessionStatus.active);
+    aiSessionToggleButton.textContent = isActive ? "Stop session" : "Start session";
+    aiSessionToggleButton.title = isActive ? "Stop session" : "Start session";
+    aiSessionToggleButton.classList.toggle("danger-btn", isActive);
+    aiSessionToggleButton.classList.toggle("primary-btn", !isActive);
+  }
+
+  const ready = Boolean(aiSessionStatus.active && aiSessionStatus.model_loaded);
+  if (aiRuntimeSections) {
+    aiRuntimeSections.classList.toggle("is-visible", ready);
+    aiRuntimeSections.setAttribute("aria-hidden", String(!ready));
+  }
+
+  if (aiModelLoadingPlaceholder) {
+    aiModelLoadingPlaceholder.classList.toggle("is-hidden", !aiIsStartingSession || ready);
+  }
+
+  if (!ready && !aiAnalyzeInProgress) {
+    setAiInvestigationOutputVisible(false);
+    setAiProcessingStatus({ visible: false });
+  }
+
+  updateAiAnalyzeButtonState();
+  updateAiChatButtonState();
+
+  if (aiModelLoadingCopy) {
+    if (ready) {
+      aiModelLoadingCopy.textContent = "AI Investigation tools are ready.";
+    } else if (aiIsStartingSession) {
+      aiModelLoadingCopy.textContent = "Loading selected model and preparing AI Investigation tools...";
+    } else {
+      aiModelLoadingCopy.textContent = "Start a session to load the selected model and unlock AI Investigation tools.";
+    }
+  }
+
+  if (aiModelSelect && aiSessionStatus.model) {
+    aiModelSelect.value = String(aiSessionStatus.model);
+  }
+
+  // Only sync from backend when a session is active to avoid wiping pending user choices.
+  if (!aiContextSliderDragging && Boolean(aiSessionStatus.active) && typeof aiSessionStatus.context_length === "number") {
+    applyContextSpecForSelectedModel(aiSessionStatus.context_length);
+  }
+}
+
+
+function updateAiSelectedArtifactsCopy() {
+  if (!aiSelectedArtifactsCopy) {
+    return;
+  }
+
+  const selectedCount = aiSelectedArtifactIds.size;
+  const totalCount = checklistData.length;
+  if (!selectedCount) {
+    aiSelectedArtifactsCopy.textContent = `0 selected (defaults to all ${totalCount} artifacts)`;
+    return;
+  }
+
+  aiSelectedArtifactsCopy.textContent = `${selectedCount} selected artifact${selectedCount === 1 ? "" : "s"}`;
+}
+
+function getAiSelectableArtifacts() {
+  return checklistData
+    .map((item) => ({
+      id: item.id,
+      artifact: String(item.artifact || "").trim(),
+      mitre: String(item.mitre || "").trim(),
+      os: String(item.os || "").trim()
+    }))
+    .sort((left, right) => left.artifact.localeCompare(right.artifact, undefined, { sensitivity: "base" }));
+}
+
+function getAiArtifactsGroupedByMitre() {
+  const grouped = new Map();
+  getAiSelectableArtifacts().forEach((item) => {
+    const category = item.mitre || "Unmapped";
+    if (!grouped.has(category)) {
+      grouped.set(category, []);
+    }
+    grouped.get(category).push(item);
+  });
+
+  const mitreIndex = new Map(mitreOrder.map((name, index) => [name, index]));
+
+  return Array.from(grouped.entries())
+    .map(([category, items]) => ({ category, items }))
+    .sort((left, right) => {
+      const leftIndex = mitreIndex.has(left.category) ? mitreIndex.get(left.category) : Number.POSITIVE_INFINITY;
+      const rightIndex = mitreIndex.has(right.category) ? mitreIndex.get(right.category) : Number.POSITIVE_INFINITY;
+
+      if (leftIndex !== rightIndex) {
+        return leftIndex - rightIndex;
+      }
+
+      return left.category.localeCompare(right.category, undefined, { sensitivity: "base" });
+    });
+}
+
+function syncAiToggleAllMitreButton() {
+  if (!aiToggleAllMitreButton || !aiArtifactSelectionList) {
+    return;
+  }
+
+  const groups = Array.from(aiArtifactSelectionList.querySelectorAll(".ai-artifact-selection-group"));
+  if (!groups.length) {
+    aiToggleAllMitreButton.disabled = true;
+    aiToggleAllMitreButton.dataset.mode = "collapse";
+    aiToggleAllMitreButton.textContent = "Collapse all";
+    aiToggleAllMitreButton.setAttribute("aria-label", "Collapse all MITRE categories");
+    return;
+  }
+
+  aiToggleAllMitreButton.disabled = false;
+  const anyExpanded = groups.some((group) => !group.classList.contains("is-collapsed"));
+  const mode = anyExpanded ? "collapse" : "expand";
+  const label = anyExpanded ? "Collapse all" : "Expand all";
+
+  aiToggleAllMitreButton.dataset.mode = mode;
+  aiToggleAllMitreButton.textContent = label;
+  aiToggleAllMitreButton.setAttribute("aria-label", `${label} MITRE categories`);
+}
+
+function setAiMitreGroupCollapsed(groupElement, collapse, animate = false) {
+  if (!groupElement) {
+    return;
+  }
+
+  const category = String(groupElement.dataset.aiMitreGroup || "").trim();
+  const body = groupElement.querySelector(".ai-artifact-selection-group-body");
+  const toggleButton = groupElement.querySelector("[data-ai-mitre-toggle]");
+  const toggleText = toggleButton?.querySelector(".ai-artifact-selection-toggle-text");
+  const shouldCollapse = Boolean(collapse);
+
+  groupElement.classList.toggle("is-collapsed", shouldCollapse);
+
+  if (category) {
+    if (shouldCollapse) {
+      aiCollapsedMitreGroups.add(category);
+    } else {
+      aiCollapsedMitreGroups.delete(category);
+    }
+  }
+
+  if (toggleButton) {
+    toggleButton.setAttribute("aria-expanded", shouldCollapse ? "false" : "true");
+    if (toggleText) {
+      toggleText.textContent = shouldCollapse ? "Expand" : "Collapse";
+    }
+  }
+
+  if (!body) {
+    syncAiToggleAllMitreButton();
+    return;
+  }
+
+  const clearAnimatedStyles = () => {
+    body.style.maxHeight = "";
+    body.style.opacity = "";
+    body.style.transform = "";
+    body.style.transition = "";
+    body.style.overflow = "";
+  };
+
+  if (!animate) {
+    body.hidden = shouldCollapse;
+    clearAnimatedStyles();
+    syncAiToggleAllMitreButton();
+    return;
+  }
+
+  const durationMs = 280;
+  body.style.overflow = "hidden";
+  body.style.transition = `max-height ${durationMs}ms var(--ease-standard), opacity ${durationMs}ms var(--ease-standard), transform ${durationMs}ms var(--ease-standard)`;
+
+  if (shouldCollapse) {
+    body.hidden = false;
+    const startHeight = body.scrollHeight;
+    body.style.maxHeight = `${startHeight}px`;
+    body.style.opacity = "1";
+    body.style.transform = "translateY(0)";
+    // Force layout before transitioning so a single-group collapse animates reliably.
+    void body.offsetHeight;
+
+    body.style.maxHeight = "0px";
+    body.style.opacity = "0";
+    body.style.transform = "translateY(-6px)";
+
+    const onCollapseEnd = (event) => {
+      if (event.target !== body || event.propertyName !== "max-height") {
+        return;
+      }
+      body.hidden = true;
+      clearAnimatedStyles();
+      syncAiToggleAllMitreButton();
+    };
+
+    body.addEventListener("transitionend", onCollapseEnd, { once: true });
+    return;
+  }
+
+  body.hidden = false;
+  body.style.maxHeight = "0px";
+  body.style.opacity = "0";
+  body.style.transform = "translateY(-6px)";
+  // Force layout before transitioning so a single-group expand animates reliably.
+  void body.offsetHeight;
+
+  const targetHeight = body.scrollHeight;
+  body.style.maxHeight = `${targetHeight}px`;
+  body.style.opacity = "1";
+  body.style.transform = "translateY(0)";
+
+  const onExpandEnd = (event) => {
+    if (event.target !== body || event.propertyName !== "max-height") {
+      return;
+    }
+    clearAnimatedStyles();
+    syncAiToggleAllMitreButton();
+  };
+
+  body.addEventListener("transitionend", onExpandEnd, { once: true });
+}
+
+function renderAiArtifactSelectionList() {
+  if (!aiArtifactSelectionList) {
+    return;
+  }
+
+  const options = getAiSelectableArtifacts();
+  const validIds = new Set(options.map((item) => item.id));
+  aiSelectedArtifactIds.forEach((id) => {
+    if (!validIds.has(id)) {
+      aiSelectedArtifactIds.delete(id);
+    }
+  });
+
+  if (!options.length) {
+    aiArtifactSelectionList.innerHTML = '<p class="ai-chat-paragraph">No artifacts available.</p>';
+    updateAiSelectedArtifactsCopy();
+    syncAiToggleAllMitreButton();
+    return;
+  }
+
+  const grouped = getAiArtifactsGroupedByMitre();
+  grouped.forEach((group) => {
+    if (!aiSeenMitreGroups.has(group.category)) {
+      aiSeenMitreGroups.add(group.category);
+      aiCollapsedMitreGroups.add(group.category);
+    }
+  });
+
+  aiArtifactSelectionList.innerHTML = grouped
+    .map((group) => {
+      const total = group.items.length;
+      const selected = group.items.filter((item) => aiSelectedArtifactIds.has(item.id)).length;
+      const checked = selected && selected === total ? "checked" : "";
+      const collapsed = aiCollapsedMitreGroups.has(group.category);
+      const collapsedClass = collapsed ? "is-collapsed" : "";
+      const toggleLabel = collapsed ? "Expand" : "Collapse";
+
+      const itemHtml = group.items
+        .map((item) => {
+          const itemChecked = aiSelectedArtifactIds.has(item.id) ? "checked" : "";
+          return `
+            <label class="ai-artifact-selection-item" role="option" aria-selected="${itemChecked ? "true" : "false"}">
+              <input class="ai-artifact-checkbox" type="checkbox" data-ai-artifact-id="${escapeHtml(item.id)}" ${itemChecked}>
+              <span>
+                <p class="ai-artifact-selection-title">${escapeHtml(item.artifact || item.id)}</p>
+                <p class="ai-artifact-selection-meta">${escapeHtml(group.category)} | ${escapeHtml(item.os || "Unknown OS")}</p>
+              </span>
+            </label>
+          `;
+        })
+        .join("");
+
+      return `
+        <section class="ai-artifact-selection-group ${collapsedClass}" data-ai-mitre-group="${escapeHtml(group.category)}">
+          <div class="ai-artifact-selection-group-header">
+            <label class="ai-artifact-selection-category">
+              <input class="ai-artifact-checkbox" type="checkbox" data-ai-mitre-category="${escapeHtml(group.category)}" ${checked}>
+              <span class="ai-artifact-selection-tree-marker" aria-hidden="true"></span>
+              <span class="ai-artifact-selection-category-label">${escapeHtml(group.category)}</span>
+            </label>
+            <div class="ai-artifact-selection-group-actions">
+              <span class="ai-artifact-selection-category-count">${selected}/${total} selected</span>
+              <button class="secondary-btn ai-artifact-selection-toggle" type="button" data-ai-mitre-toggle="${escapeHtml(group.category)}" aria-expanded="${collapsed ? "false" : "true"}">
+                <span class="ai-artifact-selection-toggle-text">${toggleLabel}</span>
+                <svg class="ai-artifact-selection-toggle-chevron" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                  <path d="M6 8l4 4 4-4"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="ai-artifact-selection-group-body" ${collapsed ? "hidden" : ""}>
+            ${itemHtml}
+          </div>
+        </section>
+      `;
+    })
+    .join("");
+
+  updateAiSelectedArtifactsCopy();
+  syncAiToggleAllMitreButton();
+}
+
+function getSelectedArtifactsForAnalyze() {
+  if (!aiSelectedArtifactIds.size) {
+    return [];
+  }
+
+  return Array.from(aiSelectedArtifactIds);
+}
+
+function applyAiArtifactUpdates(updates, mcpActivity = null) {
+  if (!Array.isArray(updates) || !updates.length) {
+    return 0;
+  }
+
+  let applied = 0;
+  updates.forEach((update) => {
+    const item = findChecklistItemForAiUpdate(update);
+    if (!item) {
+      return;
+    }
+
+    const entry = getEntry(item.id);
+    let evidenceDetailsAdded = 0;
+    if (typeof update.status === "string" && update.status.trim()) {
+      entry.status = normalizeArtifactStatus(update.status.trim(), false);
+    }
+
+    const noteText = [update?.comment, update?.notes, update?.details]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find((value) => Boolean(value));
+
+    if (noteText) {
+      const prefix = entry.comment?.trim() ? `${entry.comment.trim()}\n\n` : "";
+      entry.comment = `${prefix}${noteText}`;
+    }
+
+    if (Array.isArray(update.details) && update.details.length) {
+      const nextDetails = update.details
+        .filter((detail) => detail && typeof detail === "object")
+        .map((detail) => ({
+          id: `detail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          type: "",
+          label: String(detail.label || "Evidence").trim() || "Evidence",
+          value: String(detail.value || "").trim()
+        }))
+        .filter((detail) => detail.value);
+      if (nextDetails.length) {
+        entry.details = [...entry.details, ...nextDetails];
+        evidenceDetailsAdded += nextDetails.length;
+      }
+    } else if (typeof update.details === "string" && update.details.trim()) {
+      const value = update.details.trim();
+      if (!isGenericEvidenceText(value)) {
+        entry.details = [
+          ...entry.details,
+          {
+            id: `detail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: "",
+            label: "Evidence",
+            value
+          }
+        ];
+        evidenceDetailsAdded += 1;
+      }
+    }
+
+    if (Array.isArray(update.evidence)) {
+      const explicitEvidence = update.evidence
+        .map((value) => String(value || "").trim())
+        .filter((value) => value && !isGenericEvidenceText(value));
+      explicitEvidence.forEach((value) => {
+        entry.details = [
+          ...entry.details,
+          {
+            id: `detail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: "",
+            label: "Evidence",
+            value
+          }
+        ];
+        evidenceDetailsAdded += 1;
+      });
+    }
+
+    if (evidenceDetailsAdded === 0) {
+      const mcpEvidence = getMcpEvidenceForArtifact(item, mcpActivity);
+      mcpEvidence.forEach((value) => {
+        entry.details = [
+          ...entry.details,
+          {
+            id: `detail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: "",
+            label: "MCP evidence",
+            value
+          }
+        ];
+      });
+    }
+
+    markEntryUpdated(entry);
+    applied += 1;
+  });
+
+  if (applied > 0) {
+    saveState();
+    render();
+  }
+
+  return applied;
+}
+
+async function refreshAiSessionStatus() {
+  try {
+    const payload = await aiRequest("/api/ai/session/status");
+    setAiSessionStatus(payload);
+    if (aiStatusText) {
+      aiStatusText.textContent = payload.active
+        ? `Session active. Model: ${payload.model || "unknown"}`
+        : "No session active yet.";
+    }
+  } catch (error) {
+    if (aiStatusText) {
+      aiStatusText.textContent = `Status error: ${error.message}`;
+    }
+  }
 }
 
 function getArtifactEditorFormData() {
@@ -3766,6 +5500,7 @@ function onChecklistDataChanged() {
 
   render();
   renderArtifactEditorList();
+  renderAiArtifactSelectionList();
   saveArtifactsData();
   saveState();
 }
@@ -3946,6 +5681,12 @@ resetDialog.addEventListener("click", (event) => {
   }
 });
 
+aiClearHistoryDialog?.addEventListener("click", (event) => {
+  if (event.target === aiClearHistoryDialog) {
+    closeAiClearHistoryDialog();
+  }
+});
+
 detailInsertDialog.addEventListener("click", (event) => {
   if (event.target === detailInsertDialog) {
     closeDetailInsertDialog();
@@ -3955,6 +5696,12 @@ detailInsertDialog.addEventListener("click", (event) => {
 shortcutDialog.addEventListener("click", (event) => {
   if (event.target === shortcutDialog) {
     closeShortcutDialog();
+  }
+});
+
+aiPromptDialog?.addEventListener("click", (event) => {
+  if (event.target === aiPromptDialog) {
+    closeAiPromptDialog();
   }
 });
 
@@ -4040,10 +5787,109 @@ tutorialDialog?.addEventListener("dblclick", (event) => {
 resetDialogCloseButton.addEventListener("click", closeResetDialog);
 resetDialogCancelButton.addEventListener("click", closeResetDialog);
 resetDialogConfirmButton.addEventListener("click", resetSavedState);
+aiClearHistoryDialogCloseButton?.addEventListener("click", closeAiClearHistoryDialog);
+aiClearHistoryDialogCancelButton?.addEventListener("click", closeAiClearHistoryDialog);
+aiClearHistoryDialogConfirmButton?.addEventListener("click", () => {
+  clearAiConversationHistory();
+  closeAiClearHistoryDialog();
+});
 detailInsertCloseButton.addEventListener("click", closeDetailInsertDialog);
 detailInsertCancelButton.addEventListener("click", closeDetailInsertDialog);
 shortcutDialogCloseButton.addEventListener("click", closeShortcutDialog);
 tutorialDialogCloseButton?.addEventListener("click", closeTutorialDialog);
+aiPromptDialogCloseButton?.addEventListener("click", closeAiPromptDialog);
+aiPromptDialogCancelButton?.addEventListener("click", closeAiPromptDialog);
+aiPromptDialogResetButton?.addEventListener("click", async () => {
+  aiPromptOverrides = {
+    systemPromptOverride: "",
+    userPromptOverride: ""
+  };
+
+  if (aiSystemPromptInput) {
+    aiSystemPromptInput.value = "";
+  }
+  if (aiUserPromptInput) {
+    aiUserPromptInput.value = "";
+  }
+
+  await refreshAiPromptPreview();
+  if (aiStatusText) {
+    aiStatusText.textContent = "Prompt overrides reset to backend defaults.";
+  }
+});
+aiPromptDialogSaveButton?.addEventListener("click", async () => {
+  aiPromptOverrides = {
+    systemPromptOverride: aiSystemPromptInput?.value?.trim() || "",
+    userPromptOverride: aiUserPromptInput?.value?.trim() || ""
+  };
+  await refreshAiPromptPreview();
+  closeAiPromptDialog();
+  if (aiStatusText) {
+    aiStatusText.textContent = "Prompt overrides saved for next analysis run.";
+  }
+});
+
+aiSystemPromptInput?.addEventListener("input", () => {
+  aiPromptOverrides.systemPromptOverride = aiSystemPromptInput.value;
+  if (aiPromptPreviewTimer) {
+    window.clearTimeout(aiPromptPreviewTimer);
+  }
+  aiPromptPreviewTimer = window.setTimeout(() => {
+    refreshAiPromptPreview();
+  }, 250);
+});
+
+aiUserPromptInput?.addEventListener("input", () => {
+  aiPromptOverrides.userPromptOverride = aiUserPromptInput.value;
+  if (aiPromptPreviewTimer) {
+    window.clearTimeout(aiPromptPreviewTimer);
+  }
+  aiPromptPreviewTimer = window.setTimeout(() => {
+    refreshAiPromptPreview();
+  }, 250);
+});
+
+aiPromptEditorButton?.addEventListener("click", () => {
+  openAiPromptDialog();
+});
+
+aiOpenChatButton?.addEventListener("click", () => {
+  openAiInlineChatComposer();
+});
+
+aiInlineChatClearHistoryButton?.addEventListener("click", () => {
+  openAiClearHistoryDialog();
+});
+
+aiInlineChatSendButton?.addEventListener("click", async () => {
+  await runInlineChatPromptViaAnalyze();
+});
+
+aiInlineChatInput?.addEventListener("keydown", async (event) => {
+  if (event.key !== "Enter" || event.shiftKey) {
+    return;
+  }
+  event.preventDefault();
+  await runInlineChatPromptViaAnalyze();
+});
+
+// Delegate click as a resilient fallback in case the toolbar is re-rendered.
+document.addEventListener("click", (event) => {
+  const promptButton = event.target.closest("#aiPromptEditorButton");
+  if (!promptButton) {
+    const chatButton = event.target.closest("#aiOpenChatButton");
+    if (!chatButton) {
+      return;
+    }
+
+    event.preventDefault();
+    openAiInlineChatComposer();
+    return;
+  }
+
+  event.preventDefault();
+  openAiPromptDialog();
+});
 
 detailInsertForm?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -4149,6 +5995,11 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  if (event.key === "Escape" && aiClearHistoryDialog && !aiClearHistoryDialog.hidden) {
+    closeAiClearHistoryDialog();
+    return;
+  }
+
   if (event.key === "Escape" && !detailInsertDialog.hidden) {
     closeDetailInsertDialog();
     return;
@@ -4156,6 +6007,11 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape" && !shortcutDialog.hidden) {
     closeShortcutDialog();
+    return;
+  }
+
+  if (event.key === "Escape" && aiPromptDialog && !aiPromptDialog.hidden) {
+    closeAiPromptDialog();
     return;
   }
 
@@ -4483,6 +6339,948 @@ artifactEditorList?.addEventListener("click", (event) => {
   }
 });
 
+async function startAiSession() {
+  try {
+    setAiBusy(true);
+    aiIsStartingSession = true;
+    startAiModelLoadTimer();
+    setAiSessionStatus(aiSessionStatus);
+    let backendReady = await checkBackendHealth();
+    if (!backendReady) {
+      if (aiStatusText) {
+        aiStatusText.textContent = "Backend offline. Requesting launcher start...";
+      }
+
+      try {
+        await requestLauncherStart();
+      } catch (launcherError) {
+        if (aiStatusText) {
+          aiStatusText.textContent = `Launcher start failed: ${launcherError.message}`;
+        }
+        return;
+      }
+
+      backendReady = await waitForBackendOnline(20000);
+    }
+
+    if (!backendReady) {
+      if (aiStatusText) {
+        aiStatusText.textContent = "Backend did not come online after launcher start request.";
+      }
+      return;
+    }
+
+    if (aiStatusText) {
+      aiStatusText.textContent = "Starting session...";
+    }
+
+    const selectedModel = getSelectedAiModel();
+    if (!selectedModel) {
+      if (aiStatusText) {
+        aiStatusText.textContent = "Select a model first.";
+      }
+      return;
+    }
+
+    sessionStorage.setItem("ai-model-key", selectedModel);
+
+    const contextSpec = getSelectedModelContextSpec();
+    const contextLength = clampContextLength(aiContextLengthInput?.value, contextSpec);
+    setContextControlsValue(contextLength, contextSpec);
+    persistContextLengthForSelectedModel(contextLength);
+
+    const launch = parseCommandLine(AI_DEFAULTS.mcpCommand);
+    const payload = await aiRequest("/api/ai/session/start", "POST", {
+      lmstudio_base_url: AI_DEFAULTS.lmstudioBaseUrl,
+      model: selectedModel,
+      context_length: contextLength,
+      idle_timeout_minutes: AI_DEFAULTS.idleTimeoutMinutes,
+      mcp_command: launch.command,
+      mcp_args: launch.args
+    });
+
+    setAiSessionStatus(payload);
+    if (aiStatusText) {
+      aiStatusText.textContent = payload.message || "Session started.";
+    }
+  } catch (error) {
+    if (aiStatusText) {
+      aiStatusText.textContent = `Start failed: ${error.message}`;
+    }
+  } finally {
+    aiIsStartingSession = false;
+    stopAiModelLoadTimer();
+    setAiSessionStatus(aiSessionStatus);
+    setAiBusy(false);
+  }
+}
+
+aiSessionRefreshButton?.addEventListener("click", async () => {
+  setAiBusy(true);
+  await checkBackendHealth();
+  await refreshAiSessionStatus();
+  setAiBusy(false);
+});
+
+aiModelRefreshButton?.addEventListener("click", async () => {
+  aiModelRefreshButton.disabled = true;
+  await refreshAiModelList();
+  aiModelRefreshButton.disabled = false;
+});
+
+aiModelSelect?.addEventListener("change", () => {
+  if (aiModelSelect.value) {
+    sessionStorage.setItem("ai-model-key", aiModelSelect.value);
+  }
+  applyContextSpecForSelectedModel();
+});
+
+aiContextLengthInput?.addEventListener("input", () => {
+  if (!aiContextLengthInput) {
+    return;
+  }
+  aiContextLengthInput.value = aiContextLengthInput.value.replace(/[^\d,\s]/g, "");
+});
+
+aiContextLengthInput?.addEventListener("change", () => {
+  commitContextInputValue();
+});
+
+aiContextLengthInput?.addEventListener("blur", () => {
+  commitContextInputValue();
+});
+
+aiContextLengthInput?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+  event.preventDefault();
+  commitContextInputValue();
+});
+
+aiContextLengthSlider?.addEventListener("input", () => {
+  const spec = getSelectedModelContextSpec();
+  const normalized = setContextInputOnly(aiContextLengthSlider.value, spec);
+  persistContextLengthForSelectedModel(normalized);
+});
+
+aiContextLengthSlider?.addEventListener("pointerdown", () => {
+  aiContextSliderDragging = true;
+});
+
+aiContextLengthSlider?.addEventListener("pointerup", () => {
+  aiContextSliderDragging = false;
+});
+
+aiContextLengthSlider?.addEventListener("change", () => {
+  aiContextSliderDragging = false;
+  const spec = getSelectedModelContextSpec();
+  const normalized = setContextControlsValue(aiContextLengthSlider.value, spec);
+  persistContextLengthForSelectedModel(normalized);
+});
+
+async function stopAiSession() {
+  try {
+    setAiBusy(true);
+    aiIsStartingSession = false;
+    stopAiModelLoadTimer();
+    const payload = await aiRequest("/api/ai/session/stop", "POST", {});
+    setAiSessionStatus(payload);
+    await requestBackendShutdown();
+    await requestLauncherStop();
+    setAiBackendStatus(false, "stopped");
+    if (aiStatusText) {
+      aiStatusText.textContent = payload.message || "Session stopped.";
+    }
+  } catch (error) {
+    if (aiStatusText) {
+      aiStatusText.textContent = `Stop failed: ${error.message}`;
+    }
+  } finally {
+    setAiBusy(false);
+  }
+}
+
+aiSessionToggleButton?.addEventListener("click", async () => {
+  if (aiSessionStatus?.active) {
+    await stopAiSession();
+    return;
+  }
+  await startAiSession();
+});
+
+aiArtifactSelectionList?.addEventListener("change", (event) => {
+  const categoryInput = event.target.closest('input[type="checkbox"][data-ai-mitre-category]');
+  if (categoryInput) {
+    const mitreCategory = categoryInput.dataset.aiMitreCategory || "";
+    if (!mitreCategory) {
+      return;
+    }
+
+    checklistData.forEach((item) => {
+      const itemMitre = String(item.mitre || "").trim() || "Unmapped";
+      if (itemMitre !== mitreCategory) {
+        return;
+      }
+
+      if (categoryInput.checked) {
+        aiSelectedArtifactIds.add(item.id);
+      } else {
+        aiSelectedArtifactIds.delete(item.id);
+      }
+    });
+
+    renderAiArtifactSelectionList();
+    return;
+  }
+
+  const artifactInput = event.target.closest('input[type="checkbox"][data-ai-artifact-id]');
+  if (!artifactInput) {
+    return;
+  }
+
+  const artifactId = artifactInput.dataset.aiArtifactId;
+  if (!artifactId) {
+    return;
+  }
+
+  if (artifactInput.checked) {
+    aiSelectedArtifactIds.add(artifactId);
+  } else {
+    aiSelectedArtifactIds.delete(artifactId);
+  }
+
+  renderAiArtifactSelectionList();
+});
+
+aiArtifactSelectionList?.addEventListener("click", (event) => {
+  const toggleButton = event.target.closest('button[data-ai-mitre-toggle]');
+  if (!toggleButton) {
+    return;
+  }
+
+  const category = String(toggleButton.dataset.aiMitreToggle || "").trim();
+  if (!category) {
+    return;
+  }
+
+  const groupElement = toggleButton.closest(".ai-artifact-selection-group");
+  const nextCollapsed = !aiCollapsedMitreGroups.has(category);
+  setAiMitreGroupCollapsed(groupElement, nextCollapsed, true);
+});
+
+aiSelectAllArtifactsButton?.addEventListener("click", () => {
+  checklistData.forEach((item) => aiSelectedArtifactIds.add(item.id));
+  renderAiArtifactSelectionList();
+});
+
+aiClearArtifactsButton?.addEventListener("click", () => {
+  aiSelectedArtifactIds.clear();
+  renderAiArtifactSelectionList();
+});
+
+aiToggleAllMitreButton?.addEventListener("click", () => {
+  if (!aiArtifactSelectionList) {
+    return;
+  }
+
+  const groups = Array.from(aiArtifactSelectionList.querySelectorAll(".ai-artifact-selection-group"));
+  if (!groups.length) {
+    return;
+  }
+
+  const shouldCollapse = groups.some((group) => !group.classList.contains("is-collapsed"));
+  groups.forEach((group) => {
+    setAiMitreGroupCollapsed(group, shouldCollapse, true);
+  });
+});
+
+aiAnalyzeButton?.addEventListener("click", async () => {
+  if (aiAnalyzeInProgress) {
+    if (aiStatusText) {
+      aiStatusText.textContent = "Stopping analysis...";
+    }
+
+    aiActiveAnalyzeAbortController?.abort();
+    await requestAiAnalysisCancel();
+    return;
+  }
+
+  const analyzePayload = buildAiAnalyzePayload();
+  const runPrompt = String(analyzePayload.mcp_orders || "").trim();
+  const hasRunPrompt = Boolean(runPrompt);
+  let shouldPersistAssistantReply = false;
+
+  if (hasRunPrompt) {
+    aiConversationHistory = normalizeAiHistoryEntries([
+      ...aiConversationHistory,
+      { role: "user", content: runPrompt }
+    ]);
+    analyzePayload.chat_history = normalizeAiHistoryEntries(aiConversationHistory);
+    shouldPersistAssistantReply = true;
+    renderAiConversationHistory();
+  }
+
+  aiNextAnalyzeResponseMode = "";
+  aiNextAnalyzeOrdersOverride = "";
+  aiNextAnalyzeSelectedArtifactsOverride = null;
+  const evidencePath = analyzePayload.evidence_path;
+  let tickTimer = 0;
+  if (!evidencePath) {
+    if (aiStatusText) {
+      aiStatusText.textContent = "Please provide mounted evidence path.";
+    }
+    return;
+  }
+
+  try {
+    aiActiveAnalyzeAbortController = new AbortController();
+    setAiAnalyzeRunning(true);
+    setAiInvestigationOutputVisible(true, true);
+    setAiProcessingStatus({
+      visible: true,
+      label: "Processing prompt: preparing...",
+      percent: 2,
+      indeterminate: true
+    });
+    setAiBusy(true);
+    let finalPayload = null;
+    let latestStatusMessage = "Running investigation...";
+    let liveThinkingTranscriptRaw = "";
+    let liveFinalTranscriptRaw = "";
+    let streamChunkCount = 0;
+    const streamNotes = [];
+    const streamRows = [];
+    let rowSequence = 0;
+    let mcpLiveRowId = "";
+    let thinkingLiveRowId = "";
+    let mcpPlannedCalls = 0;
+    let mcpFinishedCalls = 0;
+    const liveExpandedRowIds = new Set();
+    let outputAutoFollow = true;
+    let outputScrollTopSnapshot = 0;
+    const startedAt = performance.now();
+
+    const nextRowId = () => {
+      rowSequence += 1;
+      return `row-${rowSequence}`;
+    };
+
+    const addStreamRow = (kind, summary, detail, options = {}) => {
+      const row = {
+        id: nextRowId(),
+        kind: String(kind || "status"),
+        summary: String(summary || "").trim() || "(update)",
+        summaryMeta: String(options.summaryMeta || "").trim(),
+        detail: String(detail || "").trim() || String(summary || "").trim() || "(no details)",
+        status: String(options.status || "done").trim() || "done",
+        isLive: Boolean(options.isLive),
+        collapsible: options.collapsible !== false
+      };
+      streamRows.push(row);
+      return row.id;
+    };
+
+    const updateStreamRow = (rowId, summary, detail, options = {}) => {
+      const row = streamRows.find((item) => item.id === rowId);
+      if (!row) {
+        return;
+      }
+      row.summary = String(summary || row.summary || "").trim() || row.summary;
+      row.detail = String(detail || row.detail || "").trim() || row.detail;
+      if (Object.prototype.hasOwnProperty.call(options, "summaryMeta")) {
+        row.summaryMeta = String(options.summaryMeta || "").trim();
+      }
+      if (Object.prototype.hasOwnProperty.call(options, "status")) {
+        row.status = String(options.status || row.status || "done").trim() || "done";
+      }
+    };
+
+    const setRowStatus = (rowId, status) => {
+      if (!rowId) {
+        return;
+      }
+      const row = streamRows.find((item) => item.id === rowId);
+      if (!row) {
+        return;
+      }
+      row.status = String(status || "done").trim() || "done";
+    };
+
+    const markAllRowsDone = () => {
+      streamRows.forEach((row) => {
+        row.status = "done";
+      });
+    };
+
+    const sentencePreviewFromThinking = (text) => {
+      const cleaned = normalizeMojibakeText(stripThinkTagsForThinking(text || ""))
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!cleaned) {
+        return "Thinking...";
+      }
+
+      const fragments = cleaned
+        .split(/(?<=[.!?])\s+|\n+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const latest = fragments.length ? fragments[fragments.length - 1] : cleaned;
+      const words = latest.split(/\s+/).filter(Boolean).slice(0, 5).join(" ");
+      const short = words || latest;
+      return short.length > 22 ? `${short.slice(0, 19)}...` : short;
+    };
+
+    const pushStreamNote = (note) => {
+      const ts = ((performance.now() - startedAt) / 1000).toFixed(1);
+      const stamped = `[${ts}s] ${note}`;
+      streamNotes.push(stamped);
+    };
+
+    const upsertStreamNote = (predicate, note) => {
+      const ts = ((performance.now() - startedAt) / 1000).toFixed(1);
+      const stamped = `[${ts}s] ${note}`;
+      for (let i = streamNotes.length - 1; i >= 0; i -= 1) {
+        if (predicate(streamNotes[i])) {
+          streamNotes[i] = stamped;
+          return;
+        }
+      }
+      streamNotes.push(stamped);
+    };
+
+    const renderLiveStream = (finalized = false) => {
+      if (!aiFindingsOutput && !aiThinkingOutput) {
+        return;
+      }
+
+      const elapsed = ((performance.now() - startedAt) / 1000).toFixed(1);
+      const thinkingBlock = stripThinkTagsForThinking(liveThinkingTranscriptRaw).trim() || "(waiting for thinking tokens...)";
+      const finalBlock = stripThinkTagsForThinking(stripThinkBlocksForFinal(liveFinalTranscriptRaw)).trim() || "(waiting for final output tokens...)";
+      const statusBlock = streamNotes.length ? streamNotes.join("\n") : "(no MCP/status events yet)";
+
+      if (aiStatusText) {
+        aiStatusText.textContent = latestStatusMessage;
+      }
+
+      if (aiTokenChunksText) {
+        aiTokenChunksText.textContent = `Token chunks: ${streamChunkCount}`;
+      }
+
+      if (aiThinkingCard) {
+        aiThinkingCard.hidden = true;
+      }
+
+      if (aiThinkingOutput) {
+        aiThinkingOutput.textContent = [
+          "Thinking stream",
+          `Elapsed: ${elapsed}s`,
+          `Token chunks received: ${streamChunkCount}`,
+          "",
+          "MCP and status timeline:",
+          statusBlock,
+          "",
+          "LLM thinking:",
+          thinkingBlock
+        ].join("\n");
+
+        // Keep the newest reasoning text visible while tokens stream in.
+        aiThinkingOutput.scrollTop = aiThinkingOutput.scrollHeight;
+      }
+
+      if (aiFindingsOutput) {
+        const rowScrollState = new Map();
+        Array.from(aiFindingsOutput.querySelectorAll("details[data-item-id]"))
+          .forEach((rowNode) => {
+            const rowId = String(rowNode.getAttribute("data-item-id") || "").trim();
+            if (!rowId) {
+              return;
+            }
+
+            const body = rowNode.querySelector("pre");
+            if (!body) {
+              return;
+            }
+
+            const atBottom = (body.scrollHeight - body.scrollTop - body.clientHeight) < 24;
+            rowScrollState.set(rowId, {
+              scrollTop: body.scrollTop,
+              atBottom
+            });
+          });
+
+        const previousOutputNode = aiFindingsOutput.querySelector(".ai-live-output-markdown");
+        if (previousOutputNode) {
+          outputScrollTopSnapshot = previousOutputNode.scrollTop;
+          const outputAtBottom = (previousOutputNode.scrollHeight - previousOutputNode.scrollTop - previousOutputNode.clientHeight) < 24;
+          outputAutoFollow = outputAtBottom;
+        }
+
+        const shouldStickToBottom = (aiFindingsOutput.scrollHeight - aiFindingsOutput.scrollTop - aiFindingsOutput.clientHeight) < 80;
+        const hasLiveOutput = Boolean(finalBlock && finalBlock !== "(waiting for final output tokens...)");
+
+        aiFindingsOutput.innerHTML = `
+          <div class="ai-stream-meta">
+            <p><strong>Investigation Output</strong></p>
+            <p>Elapsed: ${escapeHtml(elapsed)}s</p>
+            <p>Token chunks received: ${escapeHtml(String(streamChunkCount))}</p>
+          </div>
+          <div class="ai-live-feed">
+            ${streamRows.map((row) => `
+              <details class="ai-live-row${row.isLive ? " is-live" : ""} is-${escapeHtml(row.status)}" data-item-id="${escapeHtml(row.id)}">
+                <summary>
+                  <span class="ai-live-row-summary-main">${escapeHtml(normalizeMojibakeText(row.summary))}</span>
+                  <span class="ai-live-row-summary-meta">${escapeHtml(normalizeMojibakeText(row.summaryMeta || ""))}</span>
+                </summary>
+                <pre>${escapeHtml(normalizeMojibakeText(row.detail))}</pre>
+              </details>
+            `).join("")}
+            ${hasLiveOutput ? `<div class="ai-live-output-markdown ai-output-markdown">${renderSimpleMarkdown(finalBlock)}</div>` : ""}
+          </div>
+        `;
+
+        Array.from(aiFindingsOutput.querySelectorAll("details[data-item-id]")).forEach((rowNode) => {
+          const rowId = String(rowNode.getAttribute("data-item-id") || "");
+          if (rowId && liveExpandedRowIds.has(rowId)) {
+            rowNode.setAttribute("open", "open");
+          }
+
+          const summaryNode = rowNode.querySelector("summary");
+          if (summaryNode) {
+            summaryNode.addEventListener("click", () => {
+              // Preemptively track intended state so rapid token rerenders do not swallow a click.
+              const willOpen = !rowNode.open;
+              if (willOpen) {
+                liveExpandedRowIds.add(rowId);
+              } else {
+                liveExpandedRowIds.delete(rowId);
+              }
+            });
+          }
+
+          rowNode.addEventListener("toggle", () => {
+            if (rowNode.open) {
+              liveExpandedRowIds.add(rowId);
+            } else {
+              liveExpandedRowIds.delete(rowId);
+            }
+          });
+
+          const body = rowNode.querySelector("pre");
+          if (!body) {
+            return;
+          }
+
+          const row = streamRows.find((item) => item.id === rowId);
+          const prior = rowScrollState.get(rowId);
+          const isRunning = row?.status === "running";
+          const shouldAutoBottom = Boolean(isRunning || !prior || prior.atBottom);
+
+          if (rowNode.open) {
+            if (shouldAutoBottom) {
+              body.scrollTop = body.scrollHeight;
+            } else {
+              body.scrollTop = Math.max(0, Math.min(prior.scrollTop, body.scrollHeight - body.clientHeight));
+            }
+          }
+        });
+
+        const liveOutputNode = aiFindingsOutput.querySelector(".ai-live-output-markdown");
+        if (liveOutputNode) {
+          liveOutputNode.addEventListener("scroll", () => {
+            const atBottom = (liveOutputNode.scrollHeight - liveOutputNode.scrollTop - liveOutputNode.clientHeight) < 24;
+            outputAutoFollow = atBottom;
+            if (!atBottom) {
+              outputScrollTopSnapshot = liveOutputNode.scrollTop;
+            }
+          });
+
+          if (outputAutoFollow) {
+            liveOutputNode.scrollTop = liveOutputNode.scrollHeight;
+          } else {
+            liveOutputNode.scrollTop = Math.max(0, Math.min(outputScrollTopSnapshot, liveOutputNode.scrollHeight - liveOutputNode.clientHeight));
+          }
+        }
+
+        if (shouldStickToBottom) {
+          aiFindingsOutput.scrollTop = aiFindingsOutput.scrollHeight;
+        }
+      }
+    };
+
+    if (aiStatusText) {
+      aiStatusText.textContent = latestStatusMessage;
+    }
+    if (aiTokenChunksText) {
+      aiTokenChunksText.textContent = "Token chunks: 0";
+    }
+    if (aiThinkingCard) {
+      aiThinkingCard.hidden = true;
+    }
+    setAiThinkingCollapsed(false);
+    mcpLiveRowId = addStreamRow("mcp", "MCP: preparing analysis stream...", "Preparing analysis stream...", { isLive: true, status: "running" });
+    pushStreamNote("Preparing analysis stream...");
+    renderLiveStream();
+
+    tickTimer = window.setInterval(() => {
+      renderLiveStream();
+    }, 1000);
+
+    await aiAnalyzeRequestStream(analyzePayload, {
+      status: (streamStatus) => {
+        const message = streamStatus?.message || "Running investigation...";
+        latestStatusMessage = message;
+
+        const plannedMatch = String(message).match(/MCP planned calls:\s*(\d+)/i);
+        if (plannedMatch) {
+          mcpPlannedCalls = Number(plannedMatch[1]) || 0;
+        }
+
+        const normalizedMessage = String(message).trim();
+        if (/collecting mcp activity/i.test(normalizedMessage) || /mcp activity running/i.test(normalizedMessage)) {
+          const callProgress = mcpPlannedCalls > 0
+            ? (mcpFinishedCalls / mcpPlannedCalls)
+            : 0;
+          const percent = 8 + (callProgress * 56);
+          setAiProcessingStatus({
+            visible: true,
+            label: `Processing prompt: ${normalizedMessage}`,
+            percent,
+            indeterminate: mcpPlannedCalls <= 0
+          });
+        } else if (/running model analysis/i.test(normalizedMessage)) {
+          setAiProcessingStatus({
+            visible: true,
+            label: "Processing prompt: model analysis running...",
+            percent: 70,
+            indeterminate: false
+          });
+        }
+
+        if (!mcpLiveRowId) {
+          mcpLiveRowId = addStreamRow("mcp", `MCP: ${message}`, message, { isLive: true, status: "running" });
+        } else {
+          updateStreamRow(mcpLiveRowId, `MCP: ${message}`, message, { status: "running" });
+        }
+
+        if (/running model analysis/i.test(message)) {
+          setRowStatus(mcpLiveRowId, "done");
+        }
+
+        if (/^MCP activity running\.\.\./i.test(message)) {
+          upsertStreamNote((line) => /MCP activity running\.\.\./i.test(String(line)), message);
+        } else {
+          pushStreamNote(message);
+        }
+        renderLiveStream();
+      },
+      mcp: (mcpPayload) => {
+        const summary = `MCP summary: attempted=${Number(mcpPayload?.attempted_calls || 0)}, success=${Number(mcpPayload?.successful_calls || 0)}, failed=${Number(mcpPayload?.failed_calls || 0)} (${String(mcpPayload?.reason || "")})`;
+        pushStreamNote(summary);
+        if (!mcpLiveRowId) {
+          mcpLiveRowId = addStreamRow("mcp", summary, summary, { isLive: true, status: "done" });
+        } else {
+          updateStreamRow(mcpLiveRowId, summary, summary, { status: "done" });
+        }
+
+        if (Array.isArray(mcpPayload?.trace)) {
+          mcpPayload.trace.forEach((entry) => {
+            const tool = String(entry?.tool || "unknown");
+            const ok = entry?.ok ? "ok" : "failed";
+            const duration = Number(entry?.duration_seconds || 0).toFixed(2);
+            pushStreamNote(`MCP ${tool} ${ok} in ${duration}s`);
+          });
+        }
+        renderLiveStream();
+      },
+      "mcp-step": (stepPayload) => {
+        const phase = String(stepPayload?.phase || "").trim().toLowerCase();
+        const artifact = String(stepPayload?.artifact || "artifact").trim();
+        const tool = String(stepPayload?.tool || "unknown-tool").trim();
+
+        if (phase === "plan") {
+          const reason = String(stepPayload?.reason || "").trim();
+          const text = `MCP plan: run ${tool} for ${artifact}${reason ? ` (${reason})` : ""}`;
+          pushStreamNote(text);
+          updateStreamRow(mcpLiveRowId, text, text);
+          renderLiveStream();
+          return;
+        }
+
+        if (phase === "init-start") {
+          const initMessage = String(stepPayload?.message || "Initializing MCP server session...").trim();
+          const text = `MCP: ${initMessage}`;
+          pushStreamNote(text);
+          updateStreamRow(mcpLiveRowId, text, text);
+          renderLiveStream();
+          return;
+        }
+
+        if (phase === "init-finish") {
+          const initMessage = String(stepPayload?.message || "MCP initialization complete.").trim();
+          const ok = stepPayload?.ok !== false;
+          const text = `MCP: ${initMessage}${ok ? "" : " (failed)"}`;
+          pushStreamNote(text);
+          updateStreamRow(mcpLiveRowId, text, text);
+          renderLiveStream();
+          return;
+        }
+
+        if (phase === "start") {
+          const reason = String(stepPayload?.reason || "").trim();
+          const argumentsText = (() => {
+            try {
+              return JSON.stringify(stepPayload?.arguments || {});
+            } catch {
+              return "{}";
+            }
+          })();
+          const startText = `MCP: running ${tool} for ${artifact}${reason ? ` (${reason})` : ""}`;
+          const callProgress = mcpPlannedCalls > 0
+            ? (mcpFinishedCalls / mcpPlannedCalls)
+            : 0;
+          const percent = 10 + (callProgress * 55);
+          setAiProcessingStatus({
+            visible: true,
+            label: `Processing prompt: ${tool} running...`,
+            percent,
+            indeterminate: false
+          });
+          pushStreamNote(startText);
+          pushStreamNote(`MCP args: ${argumentsText}`);
+          updateStreamRow(mcpLiveRowId, startText, `${startText}\nMCP args: ${argumentsText}`);
+          renderLiveStream();
+          return;
+        }
+
+        if (phase === "finish") {
+          const ok = Boolean(stepPayload?.ok);
+          const duration = Number(stepPayload?.duration_seconds || 0).toFixed(2);
+          mcpFinishedCalls += 1;
+          const callProgress = mcpPlannedCalls > 0
+            ? Math.min(1, mcpFinishedCalls / mcpPlannedCalls)
+            : 0;
+          const percent = 12 + (callProgress * 56);
+          setAiProcessingStatus({
+            visible: true,
+            label: `Processing prompt: ${tool} ${ok ? "completed" : "failed"}`,
+            percent,
+            indeterminate: false
+          });
+          if (ok) {
+            const doneText = `MCP done: ${artifact} -> ${tool} ok in ${duration}s`;
+            pushStreamNote(doneText);
+            const excerpt = String(stepPayload?.result_excerpt || "").trim();
+            if (excerpt) {
+              const firstLine = excerpt.split(/\r?\n/)[0].slice(0, 220).trim();
+              if (firstLine) {
+                pushStreamNote(`MCP result: ${firstLine}`);
+                updateStreamRow(mcpLiveRowId, doneText, `${doneText}\nMCP result: ${firstLine}`);
+              } else {
+                updateStreamRow(mcpLiveRowId, doneText, doneText);
+              }
+            } else {
+              updateStreamRow(mcpLiveRowId, doneText, doneText);
+            }
+          } else {
+            const errorText = String(stepPayload?.error || "unknown error").trim();
+            const failText = `MCP done: ${artifact} -> ${tool} failed in ${duration}s (${errorText})`;
+            pushStreamNote(failText);
+            updateStreamRow(mcpLiveRowId, failText, failText);
+          }
+          renderLiveStream();
+          return;
+        }
+
+        const fallbackText = `MCP step: ${JSON.stringify(stepPayload || {})}`;
+        pushStreamNote(fallbackText);
+        updateStreamRow(mcpLiveRowId, fallbackText, fallbackText);
+        renderLiveStream();
+      },
+      token: (tokenPayload) => {
+        const tokenText = String(tokenPayload?.text || "");
+        if (!tokenText) {
+          return;
+        }
+
+        streamChunkCount += 1;
+        const generationPercent = Math.min(97, 70 + (Math.log10(streamChunkCount + 1) * 16));
+        setAiProcessingStatus({
+          visible: true,
+          label: "Processing prompt: generating response...",
+          percent: generationPercent,
+          indeterminate: false
+        });
+        const channel = String(tokenPayload?.channel || "final").trim().toLowerCase();
+        if (channel === "thinking") {
+          liveThinkingTranscriptRaw += tokenText;
+          const thinkingSummary = sentencePreviewFromThinking(liveThinkingTranscriptRaw);
+          const thinkingDetail = stripThinkTagsForThinking(liveThinkingTranscriptRaw).trim() || thinkingSummary;
+          const meta = `${((performance.now() - startedAt) / 1000).toFixed(1)}s | ${streamChunkCount} tok`;
+          if (!thinkingLiveRowId) {
+            thinkingLiveRowId = addStreamRow("thinking", `Thinking: ${thinkingSummary}`, thinkingDetail, { isLive: true, summaryMeta: meta, status: "running" });
+          } else {
+            updateStreamRow(thinkingLiveRowId, `Thinking: ${thinkingSummary}`, thinkingDetail, { summaryMeta: meta, status: "running" });
+          }
+          setRowStatus(mcpLiveRowId, "done");
+        } else {
+          liveFinalTranscriptRaw += tokenText;
+          const outputPreview = normalizeMojibakeText(stripThinkTagsForThinking(stripThinkBlocksForFinal(liveFinalTranscriptRaw)).replace(/\s+/g, " ").trim());
+          setRowStatus(mcpLiveRowId, "done");
+          setRowStatus(thinkingLiveRowId, "done");
+        }
+        renderLiveStream();
+      },
+      done: (payload) => {
+        finalPayload = payload || {};
+        const doneMode = String(payload?.response_mode || "").trim().toLowerCase();
+        const doneResponseText = String(payload?.response_text || payload?.raw?.response_text || "").trim();
+        if (doneMode === "chat" && doneResponseText && !String(liveFinalTranscriptRaw || "").trim()) {
+          liveFinalTranscriptRaw = doneResponseText;
+        }
+        setAiProcessingStatus({
+          visible: true,
+          label: "Processing prompt: completed",
+          percent: 100,
+          indeterminate: false
+        });
+      },
+      error: (errorPayload) => {
+        setAiProcessingStatus({
+          visible: true,
+          label: "Processing prompt: failed",
+          percent: 100,
+          indeterminate: false
+        });
+        throw new Error(errorPayload?.detail || "Analysis stream failed.");
+      }
+    }, aiActiveAnalyzeAbortController.signal);
+
+    const payload = finalPayload;
+    if (!payload) {
+      throw new Error("Analysis stream ended before final result arrived.");
+    }
+
+    if (payload?.cancelled) {
+      setAiProcessingStatus({
+        visible: true,
+        label: "Processing prompt: cancelled",
+        percent: 100,
+        indeterminate: false
+      });
+      markAllRowsDone();
+      latestStatusMessage = "Analysis cancelled by user.";
+      if (aiStatusText) {
+        aiStatusText.textContent = latestStatusMessage;
+      }
+      renderLiveStream(true);
+      return;
+    }
+
+    const responseMode = String(payload?.response_mode || "checklist").trim().toLowerCase();
+    const payloadResponseText = String(payload?.response_text || payload?.raw?.response_text || "").trim();
+    if (responseMode === "chat" && payloadResponseText && !String(liveFinalTranscriptRaw || "").trim()) {
+      liveFinalTranscriptRaw = payloadResponseText;
+    }
+
+    const finalElapsed = Number(payload?.duration_seconds || (performance.now() - startedAt) / 1000);
+    setAiProcessingStatus({
+      visible: true,
+      label: "Processing prompt: completed",
+      percent: 100,
+      indeterminate: false
+    });
+    markAllRowsDone();
+    pushStreamNote(`Analysis complete in ${finalElapsed.toFixed(1)}s.`);
+    if (payload?.summary) {
+      pushStreamNote(`Summary: ${String(payload.summary)}`);
+    }
+    renderLiveStream(true);
+
+    if (responseMode === "chat") {
+      if (shouldPersistAssistantReply) {
+        const assistantReply = String(payloadResponseText || liveFinalTranscriptRaw || payload?.summary || "").trim();
+        if (assistantReply) {
+          aiConversationHistory = normalizeAiHistoryEntries([
+            ...aiConversationHistory,
+            { role: "assistant", content: assistantReply }
+          ]);
+          renderAiConversationHistory();
+        }
+      }
+
+      if (!streamChunkCount && payloadResponseText) {
+        pushStreamNote("Rendered direct free-text response from server payload.");
+        renderLiveStream(true);
+      }
+      if (aiStatusText) {
+        const elapsed = Number(payload?.duration_seconds || 0);
+        latestStatusMessage = `Free-text response completed in ${elapsed.toFixed(1)}s.`;
+        aiStatusText.textContent = latestStatusMessage;
+      }
+      return;
+    }
+
+    const applied = applyAiArtifactUpdates(payload.updates || [], payload.mcp_activity || null);
+    if (shouldPersistAssistantReply) {
+      const checklistReply = String(payload?.response_text || payload?.summary || "Analysis completed.").trim();
+      if (checklistReply) {
+        aiConversationHistory = normalizeAiHistoryEntries([
+          ...aiConversationHistory,
+          { role: "assistant", content: checklistReply }
+        ]);
+        renderAiConversationHistory();
+      }
+    }
+    if (aiStatusText) {
+      const elapsed = Number(payload?.duration_seconds || 0);
+      latestStatusMessage = `Investigation completed in ${elapsed.toFixed(1)}s. Applied ${applied} checklist update${applied === 1 ? "" : "s"}.`;
+      aiStatusText.textContent = latestStatusMessage;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      setAiProcessingStatus({
+        visible: true,
+        label: "Processing prompt: cancelling...",
+        percent: 100,
+        indeterminate: false
+      });
+      if (aiStatusText) {
+        aiStatusText.textContent = "Stopping analysis...";
+      }
+      await requestAiAnalysisCancel();
+      if (aiStatusText) {
+        aiStatusText.textContent = "Analysis cancelled by user.";
+      }
+      setAiProcessingStatus({
+        visible: true,
+        label: "Processing prompt: cancelled",
+        percent: 100,
+        indeterminate: false
+      });
+      return;
+    }
+
+    setAiProcessingStatus({
+      visible: true,
+      label: "Processing prompt: failed",
+      percent: 100,
+      indeterminate: false
+    });
+    if (aiStatusText) {
+      latestStatusMessage = `Analysis failed: ${error.message}`;
+      aiStatusText.textContent = latestStatusMessage;
+    }
+  } finally {
+    if (tickTimer) {
+      window.clearInterval(tickTimer);
+    }
+    aiActiveAnalyzeAbortController = null;
+    setAiAnalyzeRunning(false);
+    setAiBusy(false);
+  }
+});
+
 searchInput.addEventListener("input", () => {
   persistFiltersToState();
   scheduleFilterPersistence();
@@ -4545,12 +7343,19 @@ toggleSectionsButton?.addEventListener("click", () => {
 
 buildOptions();
 applySavedControlState();
+if (aiContextLengthInput) {
+  applyContextSpecForSelectedModel(AI_DEFAULTS.contextLength || 8192);
+}
 updateLastSavedLabel();
 setAppView(activeAppView);
 setSidebarOpen(false);
 setupArtifactEditorAutocomplete();
 renderArtifactEditorList();
+renderAiArtifactSelectionList();
 render();
+refreshAiSessionStatus();
+startAiBackendPoller();
+refreshAiModelList();
 
 window.addEventListener("beforeunload", () => {
   if (stateSaveTimer || filterPersistTimer) {
