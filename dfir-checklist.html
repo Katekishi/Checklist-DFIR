@@ -21,6 +21,7 @@
     <button class="app-nav-btn is-active" type="button" data-action="switch-app-view" data-view="overview" aria-pressed="true">Overview</button>
     <button class="app-nav-btn" type="button" data-action="switch-app-view" data-view="cases" aria-pressed="false">Cases</button>
     <button class="app-nav-btn" type="button" data-action="switch-app-view" data-view="artifacts" aria-pressed="false">Artifact Manager</button>
+    <button class="app-nav-btn" type="button" data-action="switch-app-view" data-view="ai" aria-pressed="false">AI Investigator</button>
   </aside>
 
   <main class="page app-shell">
@@ -284,6 +285,174 @@
         </div>
       </section>
     </section>
+
+    <section id="aiView" class="app-view app-view-ai" aria-label="AI investigator" hidden>
+      <section class="artifact-editor-panel" aria-label="AI investigation workspace">
+        <div class="artifact-editor-header">
+          <div>
+            <p class="summary-title">AI Investigator</p>
+            <h2>LM Studio + WinForensics MCP</h2>
+            <p class="artifact-editor-copy">Run model-assisted investigations on mounted evidence, then chat about findings and optionally sync updates into the checklist.</p>
+          </div>
+          <span id="aiSessionPill" class="meta-pill"><strong>Session:</strong> stopped</span>
+        </div>
+
+        <div class="artifact-editor-grid">
+          <div class="field field-wide">
+            <label for="aiModelSelect">Model (per session)</label>
+            <div class="model-picker-row">
+              <select id="aiModelSelect">
+                <option value="">Loading models...</option>
+              </select>
+              <button id="aiModelRefreshButton" class="secondary-btn" type="button">Refresh models</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="aiContextLengthInput">Context window (tokens)</label>
+            <div class="ai-context-control">
+              <div class="ai-context-slider-row">
+                <div class="ai-context-slider-stack">
+                  <input id="aiContextLengthSlider" type="range" min="256" max="262144" step="1" value="8192" aria-label="Context window slider">
+                  <div class="ai-context-control-meta">
+                    <span id="aiContextMinLabel" class="advanced-note">min 256</span>
+                    <span id="aiContextMaxLabel" class="advanced-note">max 262144</span>
+                  </div>
+                </div>
+                <input id="aiContextLengthInput" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Model default" aria-label="Context window value">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ai-session-status-row">
+          <p id="aiBackendStatusText" class="advanced-note ai-backend-status is-checking">
+            <span class="ai-status-dot" aria-hidden="true"></span>
+            <span id="aiBackendStatusLabel">Backend: checking...</span>
+          </p>
+          <div class="ai-session-inline-controls ai-session-status-controls">
+            <button id="aiSessionToggleButton" class="primary-btn" type="button">Start session</button>
+            <button id="aiSessionRefreshButton" class="secondary-btn icon-btn" type="button" aria-label="Refresh session" title="Refresh session">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <path d="M16 10a6 6 0 1 1-1.76-4.24"></path>
+                <path d="M16 4v4h-4"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p id="aiModelLoadedText" class="advanced-note">Model memory: not loaded</p>
+
+        <div id="aiModelLoadingPlaceholder" class="ai-runtime-placeholder" aria-live="polite">
+          <p class="ai-runtime-placeholder-title">Loading model... <span id="aiModelLoadingElapsed" class="ai-runtime-placeholder-elapsed">0.0s</span></p>
+          <p id="aiModelLoadingCopy" class="ai-runtime-placeholder-copy">Start a session to load the selected model and unlock AI Investigation tools.</p>
+        </div>
+
+        <div id="aiRuntimeSections" class="ai-runtime-sections" aria-hidden="true">
+          <div class="artifact-editor-grid">
+            <div class="field field-wide">
+              <label for="aiEvidencePathInput">Mounted evidence path</label>
+              <input id="aiEvidencePathInput" type="text" placeholder="/mnt/evidence">
+            </div>
+            <div class="field">
+              <label for="aiExecutionTargetInput">Execution target (optional)</label>
+              <input id="aiExecutionTargetInput" type="text" placeholder="mimikatz.exe">
+            </div>
+            <div class="field">
+              <label for="aiIocInput">IOC (optional)</label>
+              <input id="aiIocInput" type="text" placeholder="SHA1 / filename / IP / domain">
+            </div>
+            <div class="field field-wide">
+              <label for="aiMcpOrdersInput">MCP free-text orders (optional)</label>
+              <textarea id="aiMcpOrdersInput" placeholder="Example: Analyze this machine and search for anomalies across all artifacts."></textarea>
+            </div>
+          </div>
+
+          <div class="artifact-editor-list-wrap">
+            <div class="artifact-editor-list-head">
+              <p class="summary-title">Artifact Targets</p>
+              <div class="ai-chat-head-actions">
+                <button id="aiSelectAllArtifactsButton" class="secondary-btn" type="button">Select all</button>
+                <button id="aiClearArtifactsButton" class="secondary-btn" type="button">Clear</button>
+                <button id="aiToggleAllMitreButton" class="secondary-btn" type="button" data-mode="collapse" aria-label="Collapse all MITRE categories">Collapse all</button>
+              </div>
+            </div>
+            <p id="aiSelectedArtifactsCopy" class="advanced-note">0 selected (defaults to all when empty)</p>
+            <div id="aiArtifactSelectionList" class="ai-artifact-selection-list" role="listbox" aria-label="Artifact targets"></div>
+          </div>
+
+          <div class="artifact-editor-actions">
+            <button id="aiPromptEditorButton" class="secondary-btn" type="button">View/Edit Prompts</button>
+            <button id="aiOpenChatButton" class="secondary-btn" type="button">Open chat</button>
+            <button id="aiAnalyzeButton" class="primary-btn" type="button">Analyze mounted disk</button>
+          </div>
+
+          <div id="aiInvestigationOutputSection" class="artifact-editor-list-wrap ai-investigation-output is-hidden" aria-hidden="true">
+            <div class="artifact-editor-list-head">
+              <p class="summary-title">Investigation Output</p>
+              <div class="ai-output-head-meta">
+                <p id="aiStatusText" class="advanced-note">No session active yet.</p>
+                <span id="aiTokenChunksText" class="ai-token-chunks-pill">Token chunks: 0</span>
+              </div>
+            </div>
+            <div id="aiProcessingStatus" class="ai-processing-status" hidden>
+              <div class="ai-processing-status-row">
+                <span id="aiProcessingStatusLabel">Processing prompt...</span>
+                <span id="aiProcessingStatusPercent">0%</span>
+              </div>
+              <div
+                id="aiProcessingStatusTrack"
+                class="ai-processing-bar"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <span id="aiProcessingStatusBar"></span>
+              </div>
+            </div>
+            <div class="ai-output-shell">
+              <div class="ai-output ai-output-final-box">
+                <div id="aiThinkingCard" class="ai-output-thinking-card" hidden>
+                  <div class="ai-thinking-header">
+                    <div id="aiThinkingStatusLabel" class="ai-thinking-status-label">Thinking... 0.0s</div>
+                    <button
+                      id="aiThinkingToggleButton"
+                      class="ai-thinking-toggle"
+                      type="button"
+                      aria-expanded="true"
+                      aria-controls="aiThinkingOutput"
+                      title="Collapse thinking"
+                    >
+                      Collapse
+                    </button>
+                  </div>
+                  <pre id="aiThinkingOutput" class="ai-output ai-output-thinking">Model reasoning stream will appear here while analysis runs.</pre>
+                </div>
+                <div id="aiFindingsOutput" class="ai-output-final-text">Final model output and summary will appear here.</div>
+              </div>
+            </div>
+            <div id="aiChatHistory" class="ai-chat-history" aria-live="polite"></div>
+            <div id="aiInlineChatComposer" class="ai-inline-chat-composer">
+              <label for="aiInlineChatInput">Free-text prompt</label>
+              <textarea id="aiInlineChatInput" placeholder="Describe what to investigate, then ask follow-up prompts that reference prior results."></textarea>
+              <label class="ai-inline-chat-mode-toggle" for="aiInlineChatApplyUpdatesCheckbox">
+                <input id="aiInlineChatApplyUpdatesCheckbox" type="checkbox" checked>
+                Apply results to checklist cards (JSON mode)
+              </label>
+              <div class="ai-inline-chat-actions">
+                <button id="aiInlineChatClearHistoryButton" class="icon-btn danger" type="button" title="Clear chat history and start a new chat" aria-label="Clear chat history and start a new chat">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm-3 6h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 9zm4 2v8h2v-8h-2zm4 0v8h2v-8h-2z"></path>
+                  </svg>
+                </button>
+                <button id="aiInlineChatSendButton" class="primary-btn" type="button">Run prompt</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </section>
     </div>
   </main>
 
@@ -326,6 +495,30 @@
         <div class="confirm-actions">
           <button id="resetDialogCancelButton" class="secondary-btn" type="button">Keep saved state</button>
           <button id="resetDialogConfirmButton" class="danger-btn" type="button">Delete saved data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="aiClearHistoryDialog" class="overlay" hidden>
+    <div class="overlay-panel confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="aiClearHistoryDialogTitle" aria-describedby="aiClearHistoryDialogMessage">
+      <div class="overlay-header">
+        <div class="overlay-title-block">
+          <p class="summary-title">New Chat</p>
+          <h2 id="aiClearHistoryDialogTitle" class="overlay-title">Clear conversation history?</h2>
+        </div>
+        <button id="aiClearHistoryDialogCloseButton" class="overlay-close" type="button">Cancel</button>
+      </div>
+      <div class="confirm-body">
+        <p id="aiClearHistoryDialogMessage" class="confirm-copy">
+          This removes all current chat messages from this investigation panel.
+        </p>
+        <div class="confirm-warning">
+          This action cannot be undone from the page.
+        </div>
+        <div class="confirm-actions">
+          <button id="aiClearHistoryDialogCancelButton" class="secondary-btn" type="button">Keep chat</button>
+          <button id="aiClearHistoryDialogConfirmButton" class="danger-btn" type="button">Clear chat history</button>
         </div>
       </div>
     </div>
@@ -401,6 +594,38 @@
         <p><strong>r</strong> open reset dialog</p>
         <p><strong>?</strong> open shortcuts dialog</p>
         <p><strong>Esc</strong> close open dialogs</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="aiPromptDialog" class="overlay" hidden>
+    <div class="overlay-panel confirm-panel" role="dialog" aria-modal="true" aria-labelledby="aiPromptDialogTitle">
+      <div class="overlay-header">
+        <div class="overlay-title-block">
+          <p class="summary-title">Prompt Configuration</p>
+          <h2 id="aiPromptDialogTitle" class="overlay-title">Analyze Prompt Editor</h2>
+        </div>
+        <button id="aiPromptDialogCloseButton" class="overlay-close" type="button">Close</button>
+      </div>
+      <div class="confirm-body detail-insert-form">
+        <p class="confirm-copy">Review and edit the prompts used for LLM and MCP-aware analysis.</p>
+        <div class="field">
+          <label for="aiSystemPromptInput">System prompt override (optional)</label>
+          <textarea id="aiSystemPromptInput" placeholder="Leave empty to use the backend default system prompt."></textarea>
+        </div>
+        <div class="field">
+          <label for="aiUserPromptInput">Custom analyst prompt (optional)</label>
+          <textarea id="aiUserPromptInput" placeholder="Extra instructions appended to the user prompt payload."></textarea>
+        </div>
+        <div class="field">
+          <label for="aiPromptPreviewOutput">Current prompt preview (sent on Analyze)</label>
+          <pre id="aiPromptPreviewOutput" class="ai-output ai-output-final">Loading prompt preview...</pre>
+        </div>
+        <div class="confirm-actions">
+          <button id="aiPromptDialogResetButton" class="secondary-btn" type="button">Reset to defaults</button>
+          <button id="aiPromptDialogCancelButton" class="secondary-btn" type="button">Cancel</button>
+          <button id="aiPromptDialogSaveButton" class="primary-btn" type="button">Save prompt changes</button>
+        </div>
       </div>
     </div>
   </div>
